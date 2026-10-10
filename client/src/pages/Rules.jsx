@@ -38,7 +38,7 @@ export default function Rules({ app }) {
   const put = async (c, msg) => {
     setNote({ text: t("saving") });
     try { await api("/api/config", { method: "PUT", body: c }); setSaved(c); setCfg(c); setNote({ text: msg }); }
-    catch (e) { setNote({ text: e.message, err: true }); }
+    catch (e) { setNote({ text: [401, 403].includes(e.status) ? t("auth.control") : t(e.message), err: true }); }
   };
 
   const compare = async () => {

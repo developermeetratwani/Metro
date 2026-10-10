@@ -1,10 +1,12 @@
 import express from "express";
 import { MongoClient } from "mongodb";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import { recommend, templateJustification, stationSurges, bands, DEFAULT_CONFIG } from "./rules.js";
 import { hashPassword, checkPassword, issueToken, readToken, DEMO_USERS } from "./auth.js";
-import { network, journey, heatmap, stationWeather } from "./insights.js";
+import { network, journey, heatmap, stationWeather, nearStations } from "./insights.js";
+import { securityHeaders, rateLimit, toCsv } from "./http.js";
 
 const load = (f) => JSON.parse(readFileSync(new URL(`./data/${f}`, import.meta.url), "utf8"));
 const SEED = { events: load("events.json"), holidays: load("holidays.json") };
@@ -56,14 +58,18 @@ async function getLiveEvents(date, city) {
   try {
     return await memo(`ev-${city}-${date}`, async () => {
       const [lat, lon] = CITIES[city];
-      const q = new URLSearchParams({ within: `${city === "gandhinagar" ? 12 : 20}km@${lat},${lon}`, "active.gte": date, "active.lte": date, category: "sports,concerts,festivals,conferences,expos,performing-arts", limit: "8", sort: "-phq_attendance" });
+      const q = new URLSearchParams({ within: `${city === "gandhinagar" ? 12 : 20}km@${lat},${lon}`, "active.gte": date, "active.lte": date, category: "sports,concerts,festivals,conferences,expos,performing-arts", limit: "25", sort: "-phq_attendance" });
       const r = await fetch(`https://api.predicthq.com/v1/events/?${q}`, { headers: { authorization: `Bearer ${process.env.PREDICTHQ_TOKEN}` }, signal: AbortSignal.timeout(5000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      // The search radius overlaps the neighbouring city, so keep only events within 3 km of one of this city's stations.
       return (await r.json()).results.map((e) => {
+        const [elon, elat] = e.location ?? [];
+        const stations = Number.isFinite(elat) ? nearStations(elat, elon, city) : [];
+        if (!stations.length) return null;
         const startHour = e.start.slice(0, 10) === date ? IST(e.start) : 9;
         const endHour = Math.max(startHour + 1, e.end.slice(0, 10) === date ? IST(e.end) : e.category === "sports" ? 17.5 : 21);
-        return { id: `phq-${e.id}`, name: e.title, type: e.category === "sports" || e.category === "concerts" ? "stadium" : "market", venue: e.entities?.[0]?.name ?? "Ahmedabad area", date, startHour, endHour, attendance: e.phq_attendance ?? 5000, stations: [], city, live: true };
-      });
+        return { id: `phq-${e.id}`, name: e.title, type: e.category === "sports" || e.category === "concerts" ? "stadium" : "market", venue: e.entities?.[0]?.name ?? `${stations[0]} area`, date, startHour, endHour, attendance: e.phq_attendance ?? 5000, stations, city, live: true };
+      }).filter(Boolean).slice(0, 8);
     });
   } catch (e) {
     console.warn("Live events unavailable:", e.message);
@@ -111,15 +117,19 @@ const saveConfig = async (value) => (db ? db.collection("config").replaceOne({ _
 async function groq(content, maxTokens = 300) {
   if (!process.env.GROQ_API_KEY) return null;
   try {
-    const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      signal: AbortSignal.timeout(15000),
-      headers: { authorization: `Bearer ${process.env.GROQ_API_KEY}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: process.env.GROQ_MODEL ?? "openai/gpt-oss-120b", reasoning_effort: "low", max_tokens: maxTokens, messages: [{ role: "user", content }] }),
-    });
-    const text = (await r.json()).choices?.[0]?.message?.content?.trim();
-    if (!text) console.warn("Groq empty response");
-    return text || null;
+    // gpt-oss reasoning can use up the token budget and return empty content; retry once with double the budget.
+    for (const budget of [maxTokens, maxTokens * 2]) {
+      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        signal: AbortSignal.timeout(15000),
+        headers: { authorization: `Bearer ${process.env.GROQ_API_KEY}`, "content-type": "application/json" },
+        body: JSON.stringify({ model: process.env.GROQ_MODEL ?? "openai/gpt-oss-120b", reasoning_effort: "low", max_tokens: budget, messages: [{ role: "user", content }] }),
+      });
+      const text = (await r.json()).choices?.[0]?.message?.content?.trim();
+      if (text) return text;
+      console.warn("Groq empty response", r.status);
+    }
+    return null;
   } catch (e) {
     console.warn("Groq fallback:", e.message);
     return null;
@@ -129,13 +139,18 @@ const justify = async (row) => (await groq(`Metro control room advisory. Write O
 Band: ${row.band} ${row.time}
 Action: ${row.action} (${row.base} -> ${row.headway} min)
 Stations: ${row.stations.join(", ") || "all"}
-Signals: ${row.reasons.map((x) => x.text).join("; ")}`)) ?? templateJustification(row);
+Signals: ${row.reasons.map((x) => x.text).join("; ")}`, 500)) ?? templateJustification(row);
 
 const SIM = { rain: { precipSum: 32, precipProb: 95, tempMax: 27, source: "simulated" }, clear: { precipSum: 0, precipProb: 5, tempMax: 33, source: "simulated" } };
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? "") && !Number.isNaN(Date.parse(s));
 
 const app = express();
-app.use(express.json());
+app.disable("x-powered-by");
+app.use(securityHeaders, express.json({ limit: "100kb" }));
+app.use(["/api/ask", "/api/brief", "/api/report"], rateLimit({ max: 20, windowMs: 60000 }));
+const startedAt = Date.now(), VERSION = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version ?? "0.0.0";
+const auto = { lastRun: null, nextRun: null };
+app.get("/api/health", (_req, res) => res.json({ ok: true, db: !!db, uptime: Math.round((Date.now() - startedAt) / 1000), version: VERSION, autopilot: auto }));
 
 app.get("/api/meta", async (_req, res) => res.json({ events: await find("events"), holidays: [], keys: { holidays: !!process.env.CALENDARIFIC_API_KEY, events: !!process.env.PREDICTHQ_TOKEN, weather: !!process.env.WEATHER_API_KEY, email: !!(process.env.SMTP_HOST && process.env.SMTP_USER && recipients().length) }, recipients: recipients(), db: !!db, llm: !!process.env.GROQ_API_KEY }));
 
@@ -211,6 +226,7 @@ ${a.rows.map((r) => `<tr style="border-bottom:1px solid #ddd"><td>${esc(r.band)}
 }
 app.post("/api/report/preview", route(async (req) => buildReport(req.body ?? {})));
 app.post("/api/report/send", route(async (req) => {
+  needUser(req, "control");
   const to = String(req.body?.to ?? "").trim().toLowerCase();
   if (!recipients().includes(to)) throw bad("recipient is not on the authorised list", 403);
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) throw bad("email is not configured on the server", 503);
@@ -222,14 +238,15 @@ app.post("/api/report/send", route(async (req) => {
 }));
 
 app.get("/api/config", async (_req, res) => res.json({ config: await getConfig(), defaults: DEFAULT_CONFIG }));
-app.put("/api/config", async (req, res) => {
+app.put("/api/config", route(async (req) => {
+  needUser(req, "control");
   const c = req.body;
   const nums = [...Object.values(c?.base ?? {}), ...Object.values(c?.tier ?? {}), c?.heavyRain, c?.moderateRain, c?.heat, c?.holidayWiden, c?.saturdayWiden, c?.min, c?.max];
-  if (!nums.every((n) => Number.isFinite(n) && n >= 0 && n <= 30)) return res.status(400).json({ error: "all rule values must be numbers between 0 and 30" });
-  if (![...Object.values(c.costs ?? {}), ...Object.values(c.routeKm ?? {})].every((n) => Number.isFinite(n) && n > 0 && n <= 500)) return res.status(400).json({ error: "costs and routeKm values must be numbers above 0 and at most 500" });
+  if (!nums.every((n) => Number.isFinite(n) && n >= 0 && n <= 30)) throw bad("all rule values must be numbers between 0 and 30");
+  if (![...Object.values(c.costs ?? {}), ...Object.values(c.routeKm ?? {})].every((n) => Number.isFinite(n) && n > 0 && n <= 500)) throw bad("costs and routeKm values must be numbers above 0 and at most 500");
   await saveConfig(c);
-  res.json({ ok: true });
-});
+  return { ok: true };
+}));
 
 // Multi-day planner: weather + holidays + events for each day, template reasons only (no LLM) to stay fast.
 app.post("/api/plan", async (req, res) => {
@@ -278,6 +295,7 @@ async function autoRun({ email = false } = {}) {
     }
   }
   console.log(`Autopilot built advisories for ${date}: ${done.join(", ")}`);
+  auto.lastRun = { at: new Date(), date, cities: done };
   return { date, cities: done };
 }
 function scheduleAuto() {
@@ -286,10 +304,11 @@ function scheduleAuto() {
   next.setUTCHours(h, m, 0, 0);
   if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
   setTimeout(async () => { await autoRun({ email: true }); scheduleAuto(); }, next - now);
+  auto.nextRun = new Date(Date.now() + (next - now)); // real UTC instant
   console.log(`Autopilot next run ${next.toISOString().slice(0, 16).replace("T", " ")} IST`);
 }
 app.get("/api/auto", route(async (req) => latestAuto[req.query.city] ?? null));
-app.post("/api/auto/run", route(async () => autoRun()));
+app.post("/api/auto/run", route(async (req) => { needUser(req, "admin"); return autoRun(); }));
 
 // --- Disruption mode: closed stations -> neighbour load, headway rows with closure pseudo-events, reroutes ---
 const hhmm = (h) => `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
@@ -475,12 +494,12 @@ app.get("/api/station-feed", route(async (req) => {
   const plan = latestAuto[city] ?? null;
   const date = plan?.date ?? istTomorrow();
   const list = async (coll, mem, q) => (db ? db.collection(coll).find(q, { projection: { _id: 0 } }).sort({ at: -1 }).limit(50).toArray() : mem.filter((d) => Object.entries(q).every(([k, v]) => d[k] === v)).slice(0, 50));
-  const [decisions, notices, acks] = await Promise.all([list("decisions", memDecisions, { date, city }), list("notices", memNotices, { station: st.id }), list("acks", memAcks, { station: st.id, date })]);
+  const [decisions, notices, acks, incidents] = await Promise.all([list("decisions", memDecisions, { date, city }), list("notices", memNotices, { station: st.id }), list("acks", memAcks, { station: st.id, date }), list("incidents", memIncidents, { station: st.id })]);
   return {
     station: st, date, city, alert: plan?.alert ?? null, createdAt: plan?.createdAt ?? null,
     rows: (plan?.rows ?? []).map(({ band, time, base, headway, delta, action, justification, stations }) => ({ band, time, base, headway, delta, action, justification, trainsPerHour: Math.round(60 / headway), affectsThisStation: stations.includes(st.name) })),
     surges: plan?.stations?.find((x) => x.station === st.name)?.surges ?? [],
-    decisions, notices, acks,
+    decisions, notices, acks, incidents,
   };
 }));
 
@@ -522,6 +541,96 @@ app.post("/api/brief", route(async (req) => {
   if (ai) return { text: ai.slice(0, 600), lang, ai: true };
   const text = `${cityName} Metro ${a.date} — alert ${a.alert.toUpperCase()}. ${a.weather.precipSum} mm rain, ${a.weather.tempMax}°C. ${a.rows.map((r) => `${r.band}: every ${r.headway} min${r.stations.length ? ` (${r.stations.join(", ")})` : ""}`).join(". ")}. Events: ${a.events.join(", ") || "none"}. Peak ${a.fleet.trainsPeak} trains.`;
   return { text: text.slice(0, 600), lang: "en", ai: false };
+}));
+
+// --- Incident log: station or control reports an issue; control room gets a notice ---
+const memIncidents = [];
+const INCIDENT_TYPES = ["crowding", "delay", "closure", "medical", "other"];
+app.post("/api/incidents", route(async (req) => {
+  const u = needUser(req);
+  const { type, note = "" } = req.body ?? {};
+  const st = stationById(u.role === "station" ? u.station : req.body?.station);
+  if (!st) throw bad("unknown station");
+  if (!INCIDENT_TYPES.includes(type)) throw bad(`type must be one of ${INCIDENT_TYPES.join(", ")}`);
+  if (typeof note !== "string" || note.length > 300) throw bad("note must be at most 300 characters");
+  const doc = { station: st.id, stationName: st.name, city: st.city, date: istNow().toISOString().slice(0, 10), type, note: note.trim(), by: u.name, at: new Date() };
+  const notice = { station: "control", text: `${type} at ${st.name}${doc.note ? `: ${doc.note}` : ""}`, from: u.name, at: doc.at, kind: "incident" };
+  if (db) await Promise.all([db.collection("incidents").insertOne({ ...doc }), db.collection("notices").insertOne({ ...notice })]);
+  else { memIncidents.unshift(doc); memNotices.unshift(notice); }
+  return { ok: true, incident: doc };
+}));
+app.get("/api/incidents", route(async (req) => {
+  needUser(req);
+  const { date, city } = req.query;
+  if (date !== undefined && !isDate(date)) throw bad("date must be YYYY-MM-DD");
+  if (city !== undefined && !CITIES[city]) throw bad("city must be ahmedabad or gandhinagar");
+  const q = { ...(date && { date }), ...(city && { city }) };
+  if (db) return db.collection("incidents").find(q, { projection: { _id: 0 } }).sort({ at: -1 }).limit(200).toArray();
+  return memIncidents.filter((d) => (!date || d.date === date) && (!city || d.city === city)).slice(0, 200);
+}));
+
+// --- Plan for a city/date: the autopilot's if it matches, otherwise a fast fresh one ---
+const planFor = async (city, date) => {
+  if (!CITIES[city]) throw bad("city must be ahmedabad or gandhinagar");
+  if (!isDate(date)) throw bad("date must be YYYY-MM-DD");
+  const auto = latestAuto[city];
+  if (auto?.date === date) return auto;
+  const { rawEvents, ...a } = await buildAdvisory({ date, city, weatherMode: "live" }, { fast: true });
+  return a;
+};
+
+// Passenger forecast (public, cached 10 min): busy level per station and hour, best time, trains per time of day.
+const pubCache = new Map();
+const LEVEL = (v) => (v >= 75 ? "very busy" : v >= 55 ? "busy" : v >= 35 ? "moderate" : "quiet");
+app.get("/api/public/forecast", route(async (req) => {
+  const city = String(req.query.city ?? "ahmedabad"), date = String(req.query.date ?? istTomorrow());
+  const key = `${city}|${date}`, hit = pubCache.get(key);
+  if (hit && Date.now() - hit.t < 600000) return hit.v;
+  const plan = await planFor(city, date);
+  const day = await resolveDay({ date, city, weatherMode: "live" });
+  const hm = heatmap({ ...day, dayType: plan.dayType });
+  const v = {
+    city, date,
+    bands: plan.rows.map((r) => ({ band: r.band, time: r.time, headway: r.headway, trainsPerHour: Math.round(60 / r.headway) })),
+    stations: hm.stations.map((s) => {
+      const best = s.values.map((x, i) => [x, i]).filter(([, i]) => hm.hours[i] >= 7 && hm.hours[i] <= 21).sort((a, b) => a[0] - b[0])[0];
+      return { id: s.id, name: s.name, levels: s.values.map((x, i) => ({ hour: hm.hours[i], level: LEVEL(x) })), bestTime: `${String(hm.hours[best[1]]).padStart(2, "0")}:00` };
+    }),
+  };
+  pubCache.set(key, { t: Date.now(), v });
+  return v;
+}));
+
+// Plan as CSV download.
+app.get("/api/export/plan.csv", async (req, res) => {
+  try {
+    const city = String(req.query.city ?? "ahmedabad"), date = String(req.query.date ?? istTomorrow());
+    const a = await planFor(city, date);
+    const rows = [["band", "time", "usual_min", "recommended_min", "trains_per_hour", "action", "stations", "reason"],
+      ...a.rows.map((r) => [r.band, r.time, r.base, r.headway, Math.round(60 / r.headway), r.action, r.stations.join("; "), r.justification ?? ""])];
+    res.set({ "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="metro-plan-${city}-${date}.csv"` }).send(toCsv(rows));
+  } catch (e) { res.status(e.status ?? 500).json({ error: e.status ? e.message : "internal error" }); }
+});
+
+// Notifications for the logged-in user: notices for their station (or control), decisions and incidents since lastSeen.
+const memSeen = new Map();
+const getSeen = async (u) => (db ? (await db.collection("users").findOne({ username: u.username }))?.lastSeen : memSeen.get(u.username)) ?? new Date(0);
+app.get("/api/notifications", route(async (req) => {
+  const u = needUser(req);
+  const station = u.role === "station" ? ((await findUser(u.username))?.station ?? u.station) : "control";
+  const seen = new Date(await getSeen(u));
+  const q = (coll, mem, filter) => (db ? db.collection(coll).find(filter, { projection: { _id: 0 } }).sort({ at: -1 }).limit(30).toArray() : mem.filter((d) => Object.entries(filter).every(([k, v]) => d[k] === v)).slice(0, 30));
+  const [notices, decisions] = await Promise.all([q("notices", memNotices, { station }), q("decisions", memDecisions, {})]);
+  const items = [
+    ...notices.map((n) => ({ kind: n.kind ?? "notice", text: n.text, at: n.at })),
+    ...decisions.map((d) => ({ kind: "decision", text: `${d.band}: every ${d.final} min (${d.final === d.recommended ? "approved" : `override, was ${d.recommended}`}) by ${d.operator}`, at: d.at })),
+  ].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 30);
+  return { items, unread: items.filter((i) => new Date(i.at) > seen).length };
+}));
+app.post("/api/notifications/seen", route(async (req) => {
+  const u = needUser(req);
+  if (db) await db.collection("users").updateOne({ username: u.username }, { $set: { lastSeen: new Date() } }); else memSeen.set(u.username, new Date());
+  return { ok: true };
 }));
 
 const port = process.env.PORT ?? 3001;

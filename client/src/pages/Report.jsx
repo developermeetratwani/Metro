@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Context, Msg, PageHead, usePost, bodyOf, cityName, fmtDate } from "../ui.jsx";
+import { Context, Msg, PageHead, usePost, bodyOf, cityName, fmtDate, useAuth, isControl } from "../ui.jsx";
 import { useT, LANGS } from "../i18n.js";
 
 async function copyText(text, el) {
@@ -46,6 +46,7 @@ export default function Report({ app }) {
   const [prev, preview] = usePost("/api/report/preview");
   const [sent, send] = usePost("/api/report/send");
   const [to, setTo] = useState("");
+  const control = isControl(useAuth());
 
   useEffect(() => { if (!to && recipients.length) setTo(recipients[0]); }, [recipients, to]);
 
@@ -72,9 +73,10 @@ export default function Report({ app }) {
                 {recipients.map((r) => <option key={r}>{r}</option>)}
               </select>
             </label>
-            <button className="primary" onClick={doSend} disabled={!to || sent.loading}>{sent.loading ? t("rep.sending") : t("rep.send")}</button>
+            <button className="primary" onClick={doSend} disabled={!to || sent.loading || !control}>{sent.loading ? t("rep.sending") : t("rep.send")}</button>
           </div>
           <p className="mute">{t("rep.onlyAuth")}</p>
+          {!control && <p className="msg" role="status">{t("auth.send")}</p>}
           <Msg error={sent.error} />
           {sent.data?.ok && <p className="msg ok" role="status">{t("rep.sent", { to: sent.data.sentTo ?? to })}</p>}
         </section>

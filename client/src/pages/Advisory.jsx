@@ -277,6 +277,7 @@ export default function Advisory({ app }) {
         <p className="actions">
           <button className="primary" onClick={generate} disabled={st.loading}>{st.loading ? t("adv.generating") : t("adv.generate")}</button>
           {shown && <button className="link" onClick={() => window.print()}>{t("adv.print")}</button>}
+          {shown && <a className="ghost btn" href={`/api/export/plan.csv?city=${shown.city}&date=${shown.date}`} download>{t("csv")}</a>}
         </p>
       </section>
       <Drift app={app} shown={shown} onRegen={generate} busy={st.loading} />

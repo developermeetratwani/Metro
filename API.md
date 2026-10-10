@@ -49,3 +49,13 @@ Role `admin` (login `admin`) can do everything `control` can, plus manage operat
 - `PATCH /api/admin/operators/:username` body any of `{name, email, role, station, password}` -> `{ user, notified|null }` — reassigning a station notifies again
 - `DELETE /api/admin/operators/:username` -> `{ok}`
 - station-feed rows now include `trainsPerHour` (frequency).
+
+## Round 6 — hardening (backend done)
+- Auth now required: `PUT /api/config` (control/admin), `POST /api/report/send` (control/admin), `POST /api/auto/run` (admin). 401/403 otherwise. Read endpoints stay public.
+- `POST /api/ask`, `/api/brief`, `/api/report/*` are rate limited to 20/min per IP -> 429 `{error}` with `Retry-After`.
+- All responses carry `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`. JSON bodies over 100 kb are rejected (413).
+- Live (PredictHQ) events are kept only if within 3 km of a station of the requested city, and now carry `stations` = nearest 1-2 station names.
+- `GET /api/health` -> `{ ok, db, uptime (s), version, autopilot:{ lastRun:{at,date,cities}|null, nextRun } }`
+- `POST /api/incidents` (any logged-in role; station role is locked to its own station) body `{station?, type:"crowding"|"delay"|"closure"|"medical"|"other", note? (<=300)}` -> `{ ok, incident:{station,stationName,city,date,type,note,by,at} }` — also posts a notice to the control room (`station:"control", kind:"incident"`).
+- `GET /api/incidents?date&city` (logged in) -> `[incident]` newest first. `GET /api/station-feed` now also returns `incidents` for that station.
+- Not built yet: public forecast, notifications, plan.csv export, serving client/dist.

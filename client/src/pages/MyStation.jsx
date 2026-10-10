@@ -91,6 +91,7 @@ export default function MyStation({ app }) {
               </p>
               <small>{t("my.forDay", { d: fmtDate(f.date) })}{f.createdAt && ` · ${t("my.made", { w: when(f.createdAt) })}`} · {t("my.refresh")}</small>
             </div>
+            <a className="ghost btn" href={`/api/export/plan.csv?city=${f.city ?? f.station?.city}&date=${f.date}`} download>{t("csv")}</a>
             <span className={`alert pill a-${f.alert}`}>{alertName(t, f.alert)}</span>
           </header>
 
