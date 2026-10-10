@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Msg, PageHead, useGet, api } from "../ui.jsx";
+import { Msg, PageHead, useGet, api, uniqLines } from "../ui.jsx";
 import { useT, tv } from "../i18n.js";
 
 function StationSelect({ label, value, onChange, data }) {
@@ -8,7 +8,7 @@ function StationSelect({ label, value, onChange, data }) {
     <label>{label}
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{t("j.choose")}</option>
-        {data.lines.map((l) => (
+        {uniqLines(data.lines).map((l) => (
           <optgroup key={l.id} label={tv(t, "line.", l.id)}>
             {l.stations.map((id) => <option key={id} value={id}>{data.byId[id]?.name ?? id}</option>)}
           </optgroup>

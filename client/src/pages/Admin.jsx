@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { Msg, PageHead, api, isAdmin, useAuth, useGet } from "../ui.jsx";
+import { Msg, PageHead, api, isAdmin, useAuth, useGet, uniqLines } from "../ui.jsx";
 import { useT, tv } from "../i18n.js";
 
 const ROLES = ["station", "control", "admin"];
 
-// Station select grouped by line (a station on two lines shows under both).
+// Station select grouped by line; interchanges listed once.
 function StationSelect({ net, value, onChange, label, required }) {
   const t = useT();
   return (
     <label>{label}
       <select value={value} onChange={(e) => onChange(e.target.value)} required={required}>
         <option value="">{t("adm.noStation")}</option>
-        {net.lines.map((l) => (
+        {uniqLines(net.lines).map((l) => (
           <optgroup key={l.id} label={tv(t, "line.", l.id)}>
             {l.stations.map((id) => <option key={`${l.id}-${id}`} value={id}>{net.byId[id]?.name ?? id}</option>)}
           </optgroup>

@@ -11,6 +11,10 @@ const km = (a, b) => {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
   return 12742 * Math.asin(Math.sqrt(h));
 };
+// Nearest stations of `city` within maxKm of a point (nearest first). Used to keep live events in their own city.
+export const nearStations = (lat, lon, city, maxKm = 3, n = 2) => read().stations.filter((s) => s.city === city)
+  .map((s) => ({ name: s.name, d: km({ lat, lon }, s) })).filter((s) => s.d <= maxKm).sort((a, b) => a.d - b.d).slice(0, n).map((s) => s.name);
+
 // Assumed fare slabs (INR) by distance — replace with the official table before production.
 const fareFor = (d) => (d <= 2 ? 5 : d <= 4 ? 10 : d <= 6 ? 15 : d <= 10 ? 20 : 25);
 const fail = (message, status) => Object.assign(new Error(message), { status });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useT, tv } from "../i18n.js";
-import { Context, Msg, PageHead, useGet, usePost, bodyOf, cityName, weatherName, fmtDate, fmtHour, dcls, fmtDelta, dword, bandName } from "../ui.jsx";
+import { Context, Msg, PageHead, useGet, usePost, bodyOf, cityName, weatherName, fmtDate, fmtHour, dcls, fmtDelta, dword, bandName, uniqLines } from "../ui.jsx";
 import { BarChart, LineChart } from "../charts.jsx";
 
 const hh = (h) => `${String(h).padStart(2, "0")}`;
@@ -190,7 +190,7 @@ function Disruption({ app, net }) {
         <form onSubmit={(e) => { e.preventDefault(); if (!bad) run({ date: app.date, city: app.city, closed, fromHour, toHour, weatherMode: app.weatherMode }); }}>
           <fieldset className="events">
             <legend className="label">{t("dis.closed")}</legend>
-            {net.lines.map((l) => (
+            {uniqLines(net.lines).map((l) => (
               <details key={l.id} className="dis-line" style={{ "--lc": l.color }}>
                 <summary><span className="sw" aria-hidden="true" /> {lineName(t, l)} <small className="num">{l.stations.filter((id) => closed.includes(id)).length || ""}</small></summary>
                 <ul className="checks">

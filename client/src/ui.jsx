@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { Component, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useT, tv } from "./i18n.js";
 
 // Login session {token, user} lives in localStorage; every api() call reads it from here.
@@ -144,4 +144,27 @@ export function Cost({ c, label }) {
       {v && <small>{t("cost.vs")} · {t("cost.note")}</small>}
     </div>
   );
+}
+
+// Lines with each station listed only once (interchanges sit under their first line) — for pickers.
+export const uniqLines = (lines) => {
+  const seen = new Set();
+  return lines.map((l) => ({ ...l, stations: l.stations.filter((id) => !seen.has(id) && seen.add(id)) }));
+};
+
+// One page crash shows this panel instead of blanking the app; keyed by page in App so navigating resets it.
+export class ErrorBoundary extends Component {
+  state = { err: null };
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err, info) { console.error(err, info.componentStack); }
+  render() {
+    if (!this.state.err) return this.props.children;
+    const t = this.props.t;
+    return (
+      <div className="banner high" role="alert">
+        <strong>{t("err.crash")}</strong>{" "}
+        <button className="primary" onClick={() => location.reload()}>{t("err.reload")}</button>
+      </div>
+    );
+  }
 }
