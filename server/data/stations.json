@@ -1,0 +1,689 @@
+{
+ "approximate": true,
+ "lines": [
+  {
+   "id": "blue",
+   "name": "Blue Line",
+   "color": "#1f5fa8",
+   "stations": [
+    "thaltej-gam",
+    "thaltej",
+    "doordarshan-kendra",
+    "gurukul-road",
+    "gujarat-university",
+    "commerce-six-road",
+    "sp-stadium",
+    "old-high-court",
+    "shahpur",
+    "gheekanta",
+    "kalupur-railway-station",
+    "kankaria-east",
+    "apparel-park",
+    "amraiwadi",
+    "rabari-colony",
+    "vastral",
+    "nirant-cross-road",
+    "vastral-gam"
+   ]
+  },
+  {
+   "id": "red",
+   "name": "Red Line",
+   "color": "#b3261e",
+   "stations": [
+    "apmc",
+    "jivraj-park",
+    "rajiv-nagar",
+    "shreyas",
+    "paldi",
+    "gandhigram",
+    "old-high-court",
+    "usmanpura",
+    "vijay-nagar",
+    "vadaj",
+    "ranip",
+    "sabarmati-railway-station",
+    "aec",
+    "sabarmati",
+    "motera-stadium"
+   ]
+  },
+  {
+   "id": "yellow",
+   "name": "Yellow Line",
+   "color": "#c28b00",
+   "stations": [
+    "motera-stadium",
+    "koteshwar-road",
+    "vishwakarma-college",
+    "tapovan-circle",
+    "narmada-canal",
+    "koba-circle",
+    "juna-koba",
+    "koba-gam",
+    "gnlu",
+    "raysan",
+    "randesan",
+    "dholakuva-circle",
+    "infocity",
+    "sector-1",
+    "sector-10a",
+    "sachivalaya",
+    "akshardham",
+    "juna-sachivalaya",
+    "sector-16",
+    "sector-24",
+    "mahatma-mandir"
+   ]
+  },
+  {
+   "id": "violet",
+   "name": "Violet Line",
+   "color": "#6b3fa0",
+   "stations": [
+    "gnlu",
+    "pdeu",
+    "gift-city"
+   ]
+  }
+ ],
+ "stations": [
+  {
+   "id": "thaltej-gam",
+   "name": "Thaltej Gam",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.05021,
+   "lon": 72.50701,
+   "interchange": false
+  },
+  {
+   "id": "thaltej",
+   "name": "Thaltej",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.04975,
+   "lon": 72.51602,
+   "interchange": false
+  },
+  {
+   "id": "doordarshan-kendra",
+   "name": "Doordarshan Kendra",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.04818,
+   "lon": 72.52442,
+   "interchange": false
+  },
+  {
+   "id": "gurukul-road",
+   "name": "Gurukul Road",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.04588,
+   "lon": 72.53487,
+   "interchange": false
+  },
+  {
+   "id": "gujarat-university",
+   "name": "Gujarat University",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.04485,
+   "lon": 72.54353,
+   "interchange": false
+  },
+  {
+   "id": "commerce-six-road",
+   "name": "Commerce Six Road",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.0407,
+   "lon": 72.55297,
+   "interchange": false
+  },
+  {
+   "id": "sp-stadium",
+   "name": "SP Stadium",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.03984,
+   "lon": 72.56168,
+   "interchange": false
+  },
+  {
+   "id": "old-high-court",
+   "name": "Old High Court",
+   "city": "ahmedabad",
+   "lines": [
+    "blue",
+    "red"
+   ],
+   "lat": 23.03704,
+   "lon": 72.56704,
+   "interchange": true
+  },
+  {
+   "id": "shahpur",
+   "name": "Shahpur",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.03921,
+   "lon": 72.58103,
+   "interchange": false
+  },
+  {
+   "id": "gheekanta",
+   "name": "Gheekanta",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.02879,
+   "lon": 72.58678,
+   "interchange": false
+  },
+  {
+   "id": "kalupur-railway-station",
+   "name": "Kalupur Railway Station",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.02469,
+   "lon": 72.60314,
+   "interchange": false
+  },
+  {
+   "id": "kankaria-east",
+   "name": "Kankaria East",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.01546,
+   "lon": 72.607,
+   "interchange": false
+  },
+  {
+   "id": "apparel-park",
+   "name": "Apparel Park",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.01067,
+   "lon": 72.61801,
+   "interchange": false
+  },
+  {
+   "id": "amraiwadi",
+   "name": "Amraiwadi",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.00767,
+   "lon": 72.62873,
+   "interchange": false
+  },
+  {
+   "id": "rabari-colony",
+   "name": "Rabari Colony",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.00547,
+   "lon": 72.63541,
+   "interchange": false
+  },
+  {
+   "id": "vastral",
+   "name": "Vastral",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 23.0036,
+   "lon": 72.64759,
+   "interchange": false
+  },
+  {
+   "id": "nirant-cross-road",
+   "name": "Nirant Cross Road",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 22.99973,
+   "lon": 72.65888,
+   "interchange": false
+  },
+  {
+   "id": "vastral-gam",
+   "name": "Vastral Gam",
+   "city": "ahmedabad",
+   "lines": [
+    "blue"
+   ],
+   "lat": 22.99714,
+   "lon": 72.66739,
+   "interchange": false
+  },
+  {
+   "id": "apmc",
+   "name": "APMC",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 22.99774,
+   "lon": 72.53712,
+   "interchange": false
+  },
+  {
+   "id": "jivraj-park",
+   "name": "Jivraj Park",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.0055,
+   "lon": 72.53349,
+   "interchange": false
+  },
+  {
+   "id": "rajiv-nagar",
+   "name": "Rajiv Nagar",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.00972,
+   "lon": 72.53675,
+   "interchange": false
+  },
+  {
+   "id": "shreyas",
+   "name": "Shreyas",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.0136,
+   "lon": 72.54922,
+   "interchange": false
+  },
+  {
+   "id": "paldi",
+   "name": "Paldi",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.01851,
+   "lon": 72.56245,
+   "interchange": false
+  },
+  {
+   "id": "gandhigram",
+   "name": "Gandhigram",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.02709,
+   "lon": 72.56892,
+   "interchange": false
+  },
+  {
+   "id": "usmanpura",
+   "name": "Usmanpura",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.04584,
+   "lon": 72.56498,
+   "interchange": false
+  },
+  {
+   "id": "vijay-nagar",
+   "name": "Vijay Nagar",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.05619,
+   "lon": 72.56234,
+   "interchange": false
+  },
+  {
+   "id": "vadaj",
+   "name": "Vadaj",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.06767,
+   "lon": 72.56576,
+   "interchange": false
+  },
+  {
+   "id": "ranip",
+   "name": "Ranip",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.06767,
+   "lon": 72.57408,
+   "interchange": false
+  },
+  {
+   "id": "sabarmati-railway-station",
+   "name": "Sabarmati Railway Station",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.079,
+   "lon": 72.574,
+   "interchange": false
+  },
+  {
+   "id": "aec",
+   "name": "AEC",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.07511,
+   "lon": 72.59329,
+   "interchange": false
+  },
+  {
+   "id": "sabarmati",
+   "name": "Sabarmati",
+   "city": "ahmedabad",
+   "lines": [
+    "red"
+   ],
+   "lat": 23.08563,
+   "lon": 72.59221,
+   "interchange": false
+  },
+  {
+   "id": "motera-stadium",
+   "name": "Motera Stadium",
+   "city": "ahmedabad",
+   "lines": [
+    "red",
+    "yellow"
+   ],
+   "lat": 23.09677,
+   "lon": 72.59669,
+   "interchange": true
+  },
+  {
+   "id": "koteshwar-road",
+   "name": "Koteshwar Road",
+   "city": "ahmedabad",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.10311,
+   "lon": 72.60213,
+   "interchange": false
+  },
+  {
+   "id": "vishwakarma-college",
+   "name": "Vishwakarma College",
+   "city": "ahmedabad",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.1142,
+   "lon": 72.60839,
+   "interchange": false
+  },
+  {
+   "id": "tapovan-circle",
+   "name": "Tapovan Circle",
+   "city": "ahmedabad",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.12013,
+   "lon": 72.6158,
+   "interchange": false
+  },
+  {
+   "id": "narmada-canal",
+   "name": "Narmada Canal",
+   "city": "ahmedabad",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.12515,
+   "lon": 72.6221,
+   "interchange": false
+  },
+  {
+   "id": "koba-circle",
+   "name": "Koba Circle",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.13225,
+   "lon": 72.63104,
+   "interchange": false
+  },
+  {
+   "id": "juna-koba",
+   "name": "Juna Koba",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.14197,
+   "lon": 72.63861,
+   "interchange": false
+  },
+  {
+   "id": "koba-gam",
+   "name": "Koba Gam",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.14761,
+   "lon": 72.64391,
+   "interchange": false
+  },
+  {
+   "id": "gnlu",
+   "name": "GNLU",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow",
+    "violet"
+   ],
+   "lat": 23.15447,
+   "lon": 72.64747,
+   "interchange": true
+  },
+  {
+   "id": "raysan",
+   "name": "Raysan",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.1664,
+   "lon": 72.64833,
+   "interchange": false
+  },
+  {
+   "id": "randesan",
+   "name": "Randesan",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.17908,
+   "lon": 72.64729,
+   "interchange": false
+  },
+  {
+   "id": "dholakuva-circle",
+   "name": "Dholakuva Circle",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.18594,
+   "lon": 72.64332,
+   "interchange": false
+  },
+  {
+   "id": "infocity",
+   "name": "Infocity",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.19226,
+   "lon": 72.63971,
+   "interchange": false
+  },
+  {
+   "id": "sector-1",
+   "name": "Sector-1",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.20491,
+   "lon": 72.64315,
+   "interchange": false
+  },
+  {
+   "id": "sector-10a",
+   "name": "Sector-10A",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.21148,
+   "lon": 72.65019,
+   "interchange": false
+  },
+  {
+   "id": "sachivalaya",
+   "name": "Sachivalaya",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.21507,
+   "lon": 72.65875,
+   "interchange": false
+  },
+  {
+   "id": "akshardham",
+   "name": "Akshardham",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.22368,
+   "lon": 72.66418,
+   "interchange": false
+  },
+  {
+   "id": "juna-sachivalaya",
+   "name": "Juna Sachivalaya",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.22893,
+   "lon": 72.65942,
+   "interchange": false
+  },
+  {
+   "id": "sector-16",
+   "name": "Sector-16",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.23388,
+   "lon": 72.65017,
+   "interchange": false
+  },
+  {
+   "id": "sector-24",
+   "name": "Sector-24",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.23851,
+   "lon": 72.64148,
+   "interchange": false
+  },
+  {
+   "id": "mahatma-mandir",
+   "name": "Mahatma Mandir",
+   "city": "gandhinagar",
+   "lines": [
+    "yellow"
+   ],
+   "lat": 23.23394,
+   "lon": 72.63387,
+   "interchange": false
+  },
+  {
+   "id": "pdeu",
+   "name": "PDEU",
+   "city": "gandhinagar",
+   "lines": [
+    "violet"
+   ],
+   "lat": 23.15486,
+   "lon": 72.66121,
+   "interchange": false
+  },
+  {
+   "id": "gift-city",
+   "name": "GIFT City",
+   "city": "gandhinagar",
+   "lines": [
+    "violet"
+   ],
+   "lat": 23.15336,
+   "lon": 72.68555,
+   "interchange": false
+  }
+ ]
+}

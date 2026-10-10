@@ -1,0 +1,32 @@
+# API contract (server :3001, Vite proxies /api)
+
+All errors: HTTP 4xx/5xx with `{ "error": "message" }`. cities: `ahmedabad` | `gandhinagar`. Dates `YYYY-MM-DD`.
+
+## Existing (already working)
+- `GET /api/meta` -> `{ events:[{id,name,type,venue,date,startHour,endHour,attendance,stations[],city}], db:bool, llm:bool, keys:{holidays,events,weather,email}, recipients:[string] }`
+- `GET /api/live-events?date&city` -> `[{...event, live:true}]`
+- `POST /api/recommend` body `{date, city, eventIds[], weatherMode:"live"|"rain"|"clear", config?, fast?}` ->
+  `{ date, city, weather:{precipSum,precipProb,tempMax,source}, holiday|null, events:[names], dayType, weatherSeverity, alert:"ok"|"watch"|"high",
+     rows:[{band,time,base,headway,delta,action,stations[],justification,trains,reasons:[{signal,text,delta}]}],
+     stations:[{station,surges:[{event,kind,window,level:"moderate|high|severe",crowd,note}]}],
+     fleet:{ trainsPeak, trainsBase, extraTrains, crewPeak }, createdAt }`
+- `POST /api/plan` body `{from, days(1-14), city}` -> `{ city, plan:[{date,holiday,weather,events:[{name,live}],dayType,alert,rows:[{band,base,headway,delta}],stations[]}] }`
+- `GET /api/config` -> `{config, defaults}`; `PUT /api/config` body config -> `{ok:true}`
+- `GET /api/history` -> `[{date,events[],createdAt,weather:{source}}]`
+
+## New
+- `GET /api/stations` -> `{ lines:[{id,name,color,stations:[stationId]}], stations:[{id,name,city,lines:[lineId],lat,lon,interchange:bool}] }`
+- `GET /api/stations/weather?city` -> `{ updated:ISO, source:"weatherapi"|"open-meteo", stations:[{id,name,city,temp_c,feelslike_c,humidity,wind_kph,precip_mm,chance_of_rain,condition,uv}] }`
+- `GET /api/journey?from=<stationId>&to=<stationId>&time=HH:MM` -> `{ from,to, stops, minutes, distanceKm, fare, peak:bool, legs:[{line,lineName,color,from,to,stops,stationIds[]}], interchanges:[stationName], note:"fare and times are assumed estimates" }`
+- `POST /api/heatmap` body `{date, city, eventIds[], weatherMode}` -> `{ hours:[6..23], stations:[{id,name,values:[0-100 per hour]}], peak:{station,hour,value} }`
+- `POST /api/ask` body `{question, advisory}` -> `{ answer }` (AI copilot grounded in the advisory)
+- `POST /api/report/preview` body `{date, city, eventIds[], weatherMode}` -> `{ subject, html, text }` (AI-written full report)
+- `POST /api/report/send` body `{date, city, eventIds[], weatherMode, to}` -> `{ ok:true, sentTo }` ; 403 if `to` is not an authorised recipient (see `meta.recipients`)
+
+## Round 3 (new — backend agent implements, frontend agent consumes)
+- `GET /api/auto?city` -> latest autopilot advisory (same shape as /api/recommend plus `auto:true`) or `null`. `POST /api/auto/run` -> `{date, cities}`. (already done)
+- `POST /api/disruption` body `{date, city, closed:[stationId], fromHour, toHour}` -> `{ closed:[{id,name}], rows:[recommend rows], neighbours:[{id,name,extraLoad:0-100}], reroutes:[{from,to,minutes,legs, ok:true} | {from,to,ok:false,note:"no route — bus bridge needed"}], justification }` — reroute `from`/`to` are station names; optional `weatherMode` (default live). Note: the network has no loops, so any mid-line closure yields a bus bridge.
+- `GET /api/drift?city` -> `{ planned:{date, weather, alert, createdAt} | null, now:{weather, alert}, changed:bool, bandsChanged:[{band, planned, now}] }`
+- `POST /api/decisions` body `{date, city, band, recommended, final, operator, reason}` -> `{ok:true}` (400 if final outside min..max, or reason missing when final != recommended). `GET /api/decisions?date&city` -> `[{date,city,band,recommended,final,operator,reason,at}]` newest first
+- `POST /api/brief` body `{date, city, eventIds?, weatherMode, lang:"en"|"gu"|"hi"}` -> `{ text (<=600 chars), lang, ai:bool }` — staff shift brief, copy/share only. When AI is unavailable the English template is returned with `lang:"en"`, `ai:false`.
+- `/api/recommend`, `/api/plan` days and `/api/auto` additionally return `cost: { trainKm, energyKWh, costINR, co2Kg, vsBaseline:{ trainKm, costINR, co2Kg } }` (assumed constants, editable in config as `costs:{ kWhPerTrainKm, inrPerKWh, kgCO2PerKWh }`)

@@ -1,0 +1,107 @@
+[
+  {
+    "id": "cricket",
+    "name": "T20 Cricket Match",
+    "type": "stadium",
+    "venue": "Narendra Modi Stadium",
+    "date": "2026-10-11",
+    "startHour": 19,
+    "endHour": 21.5,
+    "attendance": 60000,
+    "stations": [
+      "Motera Stadium",
+      "Sabarmati"
+    ],
+    "city": "ahmedabad"
+  },
+  {
+    "id": "garba",
+    "name": "Navratri Garba Night",
+    "type": "festival",
+    "venue": "GMDC Ground",
+    "date": "2026-10-12",
+    "startHour": 20,
+    "endHour": 25,
+    "attendance": 25000,
+    "stations": [
+      "Thaltej Gam",
+      "Gurukul Road"
+    ],
+    "city": "ahmedabad"
+  },
+  {
+    "id": "exam",
+    "name": "University Exam Day",
+    "type": "exam",
+    "venue": "City-wide",
+    "date": "2026-10-13",
+    "startHour": 9,
+    "endHour": 12,
+    "attendance": 20000,
+    "stations": [
+      "Gujarat University",
+      "Vastrapur"
+    ],
+    "city": "ahmedabad"
+  },
+  {
+    "id": "diwali-market",
+    "name": "Diwali Shopping Rush",
+    "type": "market",
+    "venue": "Lal Darwaja / Kalupur",
+    "date": "2026-11-06",
+    "startHour": 17,
+    "endHour": 21,
+    "attendance": 15000,
+    "stations": [
+      "Kalupur",
+      "Shahpur"
+    ],
+    "city": "ahmedabad"
+  },
+  {
+    "id": "concert",
+    "name": "Riverfront Concert",
+    "type": "stadium",
+    "venue": "Sabarmati Riverfront",
+    "date": "2026-10-17",
+    "startHour": 19,
+    "endHour": 22,
+    "attendance": 12000,
+    "stations": [
+      "Sabarmati",
+      "Usmanpura"
+    ],
+    "city": "ahmedabad"
+  },
+  {
+    "id": "summit",
+    "name": "Vibrant Gujarat Summit",
+    "type": "stadium",
+    "venue": "Mahatma Mandir",
+    "date": "2026-10-14",
+    "startHour": 9,
+    "endHour": 18,
+    "attendance": 20000,
+    "stations": [
+      "Mahatma Mandir",
+      "Sector 1"
+    ],
+    "city": "gandhinagar"
+  },
+  {
+    "id": "akshardham",
+    "name": "Akshardham Festival Crowd",
+    "type": "market",
+    "venue": "Akshardham Temple",
+    "date": "2026-10-18",
+    "startHour": 16,
+    "endHour": 21,
+    "attendance": 12000,
+    "stations": [
+      "Akshardham",
+      "Sector 10A"
+    ],
+    "city": "gandhinagar"
+  }
+]

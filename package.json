@@ -1,0 +1,11 @@
+{
+  "name": "metro-ops-mvps",
+  "private": true,
+  "scripts": {
+    "install:all": "npm i && npm i --prefix server && npm i --prefix client",
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "test": "npm test --prefix server",
+    "mongo": "docker run -d --name metro-mongo -p 27017:27017 mongo:7"
+  },
+  "devDependencies": { "concurrently": "^9.0.1" }
+}
