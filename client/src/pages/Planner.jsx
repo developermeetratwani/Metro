@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Msg, PageHead, usePost, tomorrow, cityName, fmtDate, dcls, CITIES, ALERT } from "../ui.jsx";
+import { Msg, PageHead, usePost, tomorrow, cityName, fmtDate, dcls, CitySelect, alertName, Cost } from "../ui.jsx";
+import { useT } from "../i18n.js";
 
 const BANDS = ["Morning", "Midday", "Evening", "Late"];
 const holidayName = (h) => (typeof h === "string" ? h : h?.name);
@@ -12,16 +13,20 @@ export default function Planner({ app }) {
   const plan = st.data?.plan ?? [];
   const flagged = plan.filter((d) => d.alert && d.alert !== "ok");
   const planCity = st.data?.city ?? app.city;
+  const t = useT();
+  const ALERT = new Proxy({}, { get: (_, a) => alertName(t, a) });
+  const costs = plan.map((d) => d.cost).filter(Boolean);
+  const sum = (f) => costs.reduce((a, c) => a + (+f(c) || 0), 0);
+  const total = costs.length > 0 && {
+    trainKm: sum((c) => c.trainKm), costINR: sum((c) => c.costINR), co2Kg: sum((c) => c.co2Kg),
+    vsBaseline: costs.every((c) => c.vsBaseline) ? { trainKm: sum((c) => c.vsBaseline.trainKm), costINR: sum((c) => c.vsBaseline.costINR), co2Kg: sum((c) => c.vsBaseline.co2Kg) } : null,
+  };
 
   return (
     <>
       <PageHead title="Look-ahead planner" lede="One row per day. Cells show the recommended headway in minutes: red is tighter than baseline, green is wider." />
       <form className="controls" onSubmit={(e) => { e.preventDefault(); run({ from, days, city: app.city }); }}>
-        <label>City
-          <select value={app.city} onChange={(e) => app.setCity(e.target.value)}>
-            {CITIES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </label>
+        <CitySelect value={app.city} onChange={app.setCity} />
         <label>From<input type="date" value={from} onChange={(e) => e.target.value && setFrom(e.target.value)} /></label>
         <label>Days
           <select value={days} onChange={(e) => setDays(+e.target.value)}>{[3, 7, 14].map((n) => <option key={n}>{n}</option>)}</select>
@@ -36,7 +41,7 @@ export default function Planner({ app }) {
           <p className={flagged.length ? "banner" : "msg"} role="status">
             {flagged.length
               ? <><strong>{flagged.length} day{flagged.length > 1 ? "s" : ""} flagged:</strong> {flagged.map((d, i) => <span key={d.date}>{i > 0 && ", "}<button className="link" onClick={() => app.openDay(d.date, planCity)}>{fmtDate(d.date)}</button> ({ALERT[d.alert] ?? d.alert})</span>)}</>
-              : `No flagged days in this ${plan.length}-day window for ${cityName(planCity)}.`}
+              : `No flagged days in this ${plan.length}-day window for ${cityName(t, planCity)}.`}
           </p>
           <div className="scroll">
             <table className="plan">
@@ -64,6 +69,7 @@ export default function Planner({ app }) {
               </tbody>
             </table>
           </div>
+          {total && <Cost c={total} label={t("plan.total", { n: costs.length })} />}
         </>
       )}
     </>

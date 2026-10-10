@@ -1,9 +1,11 @@
 import { useEffect } from "react";
+import { useT } from "../i18n.js";
 import { Context, Msg, PageHead, useGet, usePost, bodyOf, cityName, weatherName, fmtDate } from "../ui.jsx";
 
 const hh = (h) => `${String(h).padStart(2, "0")}`;
 
 function Heatmap({ app }) {
+  const t = useT();
   const [st, run] = usePost("/api/heatmap");
   const load = () => run(bodyOf(app));
   useEffect(() => { load(); }, [app.city]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -12,7 +14,7 @@ function Heatmap({ app }) {
   return (
     <section>
       <h2 className="sub">Crowd by hour</h2>
-      <p className="lede">Modelled crowd index, 0 to 100, for {cityName(app.city)} on {fmtDate(app.date)} with {app.eventIds.length} selected event{app.eventIds.length === 1 ? "" : "s"} and {weatherName(app.weatherMode).toLowerCase()}. Change events on the Advisory page.</p>
+      <p className="lede">Modelled crowd index, 0 to 100, for {cityName(t, app.city)} on {fmtDate(app.date)} with {app.eventIds.length} selected event{app.eventIds.length === 1 ? "" : "s"} and {weatherName(t, app.weatherMode).toLowerCase()}. Change events on the Advisory page.</p>
       <p className="actions"><button className="primary" onClick={load} disabled={st.loading}>{st.loading ? "Loading..." : "Refresh heatmap"}</button></p>
       <Msg error={st.error} loading={st.loading && !d} />
       {d && !d.stations?.length && <p className="msg">No station data returned.</p>}

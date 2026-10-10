@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
+import { useT, tv } from "./i18n.js";
 
 export async function api(path, opts) {
   let res;
   try {
     res = await fetch(path, opts && { ...opts, headers: { "Content-Type": "application/json" }, body: opts.body && JSON.stringify(opts.body) });
   } catch {
-    throw new Error("Server not reachable.");
+    throw new Error("err.unreachable");
   }
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { /* non-JSON body */ }
-  if (!res.ok) throw new Error(data?.error || (res.status === 404 ? "This endpoint is not available on the server yet." : `Request failed (HTTP ${res.status}).`));
-  if (data === null) throw new Error("Unexpected response from server.");
+  if (!res.ok) throw new Error(data?.error || (res.status === 404 ? "err.404" : `err.http:${res.status}`));
+  if (data === null) throw new Error("err.bad");
   return data;
 }
 
@@ -43,10 +44,10 @@ export function usePost(path) {
   return [s, run];
 }
 
-export const CITIES = [["ahmedabad", "Ahmedabad"], ["gandhinagar", "Gandhinagar"]];
-export const WEATHER = [["live", "Live forecast"], ["rain", "Simulate rain"], ["clear", "Simulate clear"]];
-export const cityName = (c) => CITIES.find(([k]) => k === c)?.[1] ?? c;
-export const weatherName = (m) => WEATHER.find(([k]) => k === m)?.[1] ?? m;
+export const CITIES = ["ahmedabad", "gandhinagar"];
+export const WEATHER = ["live", "rain", "clear"];
+export const cityName = (t, c) => tv(t, "city.", c);
+export const weatherName = (t, m) => tv(t, "wx.", m);
 export const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
 export const tomorrow = () => { const d = new Date(Date.now() + 864e5); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
 // 21.5 -> 21:30, 25 -> 01:00 (next day)
@@ -56,30 +57,41 @@ export const fmtDate = (s) => new Date(`${s}T00:00:00`).toLocaleDateString("en-G
 // delta < 0 = trains more frequent (tighten); > 0 = wider gaps
 export const dcls = (d) => (d < 0 ? "tight" : d > 0 ? "wide" : "same");
 export const fmtDelta = (d) => (d < 0 ? `−${-d} min` : d > 0 ? `+${d} min` : "—");
-export const dword = (d) => (d < 0 ? "Tighten" : d > 0 ? "Widen" : "Hold");
-export const ALERT = { ok: "Normal", watch: "Watch", high: "High alert" };
+export const dword = (t, d) => t(`d.${dcls(d)}`);
+export const alertName = (t, a) => tv(t, "alert.", a);
+export const bandName = (t, b) => tv(t, "band.", b);
 
-export const Msg = ({ loading, error, empty, children }) =>
-  loading ? <p className="msg" role="status">Loading…</p>
-  : error ? <p className="msg err" role="alert">{error}</p>
-  : empty ? <p className="msg">{empty}</p>
-  : children ?? null;
+export function Msg({ loading, error, empty, children }) {
+  const t = useT();
+  return loading ? <p className="msg" role="status">{t("loading")}</p>
+    : error ? <p className="msg err" role="alert">{t(error)}</p>
+    : empty ? <p className="msg">{empty}</p>
+    : children ?? null;
+}
+
+export function CitySelect({ value, onChange }) {
+  const t = useT();
+  return (
+    <label>{t("city")}
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {CITIES.map((k) => <option key={k} value={k}>{cityName(t, k)}</option>)}
+      </select>
+    </label>
+  );
+}
 
 export function Context({ app, weather = true }) {
+  const t = useT();
   return (
     <div className="controls">
-      <label>City
-        <select value={app.city} onChange={(e) => app.setCity(e.target.value)}>
-          {CITIES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-      </label>
-      <label>Date
+      <CitySelect value={app.city} onChange={app.setCity} />
+      <label>{t("date")}
         <input type="date" value={app.date} onChange={(e) => e.target.value && app.setDate(e.target.value)} />
       </label>
       {weather && (
-        <label>Weather
+        <label>{t("weather")}
           <select value={app.weatherMode} onChange={(e) => app.setWeatherMode(e.target.value)}>
-            {WEATHER.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {WEATHER.map((k) => <option key={k} value={k}>{weatherName(t, k)}</option>)}
           </select>
         </label>
       )}
@@ -94,4 +106,25 @@ export const PageHead = ({ title, lede }) => (
   </header>
 );
 
+// Number formatted for the en-IN grouping the control room uses (1,23,456).
+export const n0 = (x) => (x == null || Number.isNaN(+x) ? "-" : Math.round(+x).toLocaleString("en-IN"));
+
+export function lsGet(k, d = "") { try { return localStorage.getItem(k) ?? d; } catch { return d; } }
+export function lsSet(k, v) { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } }
+
 export const bodyOf = (app) => ({ date: app.date, city: app.city, eventIds: app.eventIds, weatherMode: app.weatherMode });
+
+export function Cost({ c, label }) {
+  const t = useT();
+  const v = c.vsBaseline;
+  const sg = (x) => (x > 0 ? `+${n0(x)}` : x < 0 ? `−${n0(-x)}` : "0");
+  return (
+    <div className="fleet cost">
+      <span className="label">{label ?? t("cost.label")}</span>
+      <span><b className="num">{n0(c.trainKm)}</b> {t("cost.trainKm")}{v && <small className="num">{sg(v.trainKm)}</small>}</span>
+      <span><b className="num">&#8377;{n0(c.costINR)}</b>{v && <small className="num">{sg(v.costINR)}</small>}</span>
+      <span><b className="num">{n0(c.co2Kg)}</b> {t("cost.co2")}{v && <small className="num">{sg(v.co2Kg)}</small>}</span>
+      {v && <small>{t("cost.vs")} · {t("cost.note")}</small>}
+    </div>
+  );
+}
