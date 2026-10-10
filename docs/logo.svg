@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-labelledby="t">
+  <title id="t">Metro Ops logo</title>
+  <rect x="2" y="2" width="116" height="116" rx="26" fill="#f6f4ef" stroke="#0f766e" stroke-width="4"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="9">
+    <path d="M18 42 H50 L60 52 H102" stroke="#1f5fa8"/>
+    <path d="M60 98 V52 L60 22" stroke="#b3261e"/>
+    <path d="M24 86 L60 52 L92 22" stroke="#c28b00"/>
+  </g>
+  <path d="M92 22 L104 14" fill="none" stroke="#6b3fa0" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="60" cy="52" r="10" fill="#f6f4ef" stroke="#161616" stroke-width="4"/>
+  <circle cx="92" cy="22" r="6" fill="#f6f4ef" stroke="#161616" stroke-width="3"/>
+  <path d="M30 104 h12 M48 104 h8" stroke="#0f766e" stroke-width="4" stroke-linecap="round"/>
+</svg>
