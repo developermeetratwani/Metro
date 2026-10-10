@@ -30,3 +30,14 @@ All errors: HTTP 4xx/5xx with `{ "error": "message" }`. cities: `ahmedabad` | `g
 - `POST /api/decisions` body `{date, city, band, recommended, final, operator, reason}` -> `{ok:true}` (400 if final outside min..max, or reason missing when final != recommended). `GET /api/decisions?date&city` -> `[{date,city,band,recommended,final,operator,reason,at}]` newest first
 - `POST /api/brief` body `{date, city, eventIds?, weatherMode, lang:"en"|"gu"|"hi"}` -> `{ text (<=600 chars), lang, ai:bool }` — staff shift brief, copy/share only. When AI is unavailable the English template is returned with `lang:"en"`, `ai:false`.
 - `/api/recommend`, `/api/plan` days and `/api/auto` additionally return `cost: { trainKm, energyKWh, costINR, co2Kg, vsBaseline:{ trainKm, costINR, co2Kg } }` (assumed constants, editable in config as `costs:{ kWhPerTrainKm, inrPerKWh, kgCO2PerKWh }`)
+
+## Round 4 — operator login (backend done)
+Auth header: `Authorization: Bearer <token>` (token from login, valid 12 h). Roles: `control` (control room) and `station` (one station).
+- `POST /api/auth/login` body `{username, password}` -> `{ token, user:{username,name,role,station} }` ; 401 wrong credentials, 429 after 5 failed tries
+- `GET /api/auth/me` -> `{username, role, station, name}` ; 401 if not logged in
+- `GET /api/auth/accounts` -> `[{username,name,role,station}]` (demo accounts list, no passwords — for a "who can log in" hint)
+- `GET /api/station-feed[?station=<id>]` (station role is locked to its own station; control may pass any) ->
+  `{ station:{id,name,city,lines,interchange}, date, city, alert, createdAt, rows:[{band,time,base,headway,delta,action,justification,affectsThisStation}], surges:[...], decisions:[{band,recommended,final,operator,reason,at}], notices:[{station,text,from,at}], acks:[{by,at}] }`
+- `POST /api/station-feed/ack` (station role) body `{date}` -> `{ok}` — "I have read tomorrow's plan"
+- `POST /api/notices` (control role) body `{station, text}` -> `{ok}` — message from control room to a station
+- `POST /api/decisions` now REQUIRES a control-role token; `operator` is taken from the login (body field ignored). 401/403 otherwise.

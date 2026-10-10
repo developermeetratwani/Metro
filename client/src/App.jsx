@@ -17,7 +17,7 @@ const PAGES = [
   ["rules", Rules],
   ["report", Report],
 ];
-const fromHash = () => { const k = location.hash.replace(/^#\/?/, ""); return PAGES.some(([id]) => id === k) ? k : "advisory"; };
+const fromHash = () => { const k = location.hash.replace(/^#\/?/, "").split("?")[0]; return PAGES.some(([id]) => id === k) ? k : "advisory"; };
 
 export default function App() {
   const [page, setPage] = useState(fromHash);

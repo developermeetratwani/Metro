@@ -3,6 +3,7 @@ import { MongoClient } from "mongodb";
 import { readFileSync } from "node:fs";
 import nodemailer from "nodemailer";
 import { recommend, templateJustification, stationSurges, bands, DEFAULT_CONFIG } from "./rules.js";
+import { hashPassword, checkPassword, issueToken, readToken, DEMO_USERS } from "./auth.js";
 import { network, journey, heatmap, stationWeather } from "./insights.js";
 
 const load = (f) => JSON.parse(readFileSync(new URL(`./data/${f}`, import.meta.url), "utf8"));
@@ -345,8 +346,82 @@ app.get("/api/drift", route(async (req) => {
 
 // --- Decision / audit log: what the operator actually ran vs what was recommended ---
 const memDecisions = [];
+// --- Operator login: control room decides; station operators see their station's updates ---
+const memUsers = [];
+const userColl = () => (db ? db.collection("users") : null);
+const findUser = async (username) => (userColl() ? userColl().findOne({ username }, { projection: { _id: 0 } }) : memUsers.find((u) => u.username === username));
+async function seedUsers() {
+  const pw = process.env.DEMO_PASSWORD;
+  if (!pw) return console.warn("DEMO_PASSWORD not set — no operator accounts seeded");
+  for (const u of DEMO_USERS) {
+    if (await findUser(u.username)) continue;
+    const doc = { ...u, ...hashPassword(pw), createdAt: new Date() };
+    if (userColl()) await userColl().insertOne(doc); else memUsers.push(doc);
+  }
+}
+const needUser = (req, role) => {
+  const u = readToken(req.headers.authorization);
+  if (!u) throw bad("please log in", 401);
+  if (role && u.role !== role) throw bad("not allowed for your role", 403);
+  return u;
+};
+const loginTries = new Map(); // shortcut: in-memory brute-force limit per username, fine for one server
+app.post("/api/auth/login", route(async (req) => {
+  const { username, password } = req.body ?? {};
+  if (typeof username !== "string" || typeof password !== "string" || !username || username.length > 40 || password.length > 200) throw bad("username and password are required");
+  const key = username.toLowerCase(), tries = loginTries.get(key) ?? { n: 0, t: Date.now() };
+  if (tries.n >= 5 && Date.now() - tries.t < 600000) throw bad("too many attempts — try again in 10 minutes", 429);
+  const user = await findUser(key);
+  if (!user || !checkPassword(password, user)) { loginTries.set(key, { n: tries.n + 1, t: Date.now() }); throw bad("wrong username or password", 401); }
+  loginTries.delete(key);
+  const { hash, salt, ...pub } = user;
+  return { token: issueToken(user), user: pub };
+}));
+app.get("/api/auth/me", route(async (req) => needUser(req)));
+app.get("/api/auth/accounts", route(async () => DEMO_USERS.map(({ username, name, role, station }) => ({ username, name, role, station }))));
+
+// Notices from the control room to a station, and station acknowledgements.
+const memNotices = [], memAcks = [];
+app.post("/api/notices", route(async (req) => {
+  const u = needUser(req, "control");
+  const { station, text } = req.body ?? {};
+  if (!network().stations.some((s) => s.id === station)) throw bad("unknown station");
+  if (typeof text !== "string" || !text.trim() || text.length > 500) throw bad("message must be 1-500 characters");
+  const doc = { station, text: text.trim(), from: u.name, at: new Date() };
+  if (db) await db.collection("notices").insertOne({ ...doc }); else memNotices.unshift(doc);
+  return { ok: true };
+}));
+app.post("/api/station-feed/ack", route(async (req) => {
+  const u = needUser(req, "station");
+  const { date } = req.body ?? {};
+  if (!isDate(date)) throw bad("date must be YYYY-MM-DD");
+  const doc = { station: u.station, date, by: u.name, at: new Date() };
+  if (db) await db.collection("acks").insertOne({ ...doc }); else memAcks.unshift(doc);
+  return { ok: true };
+}));
+// One station's view: today's plan rows that touch it, surges there, control-room decisions, notices, acks.
+app.get("/api/station-feed", route(async (req) => {
+  const u = needUser(req);
+  const stationId = u.role === "station" ? u.station : String(req.query.station ?? "");
+  const st = network().stations.find((s) => s.id === stationId);
+  if (!st) throw bad("unknown station");
+  const city = st.city;
+  const plan = latestAuto[city] ?? null;
+  const date = plan?.date ?? istTomorrow();
+  const list = async (coll, mem, q) => (db ? db.collection(coll).find(q, { projection: { _id: 0 } }).sort({ at: -1 }).limit(50).toArray() : mem.filter((d) => Object.entries(q).every(([k, v]) => d[k] === v)).slice(0, 50));
+  const [decisions, notices, acks] = await Promise.all([list("decisions", memDecisions, { date, city }), list("notices", memNotices, { station: st.id }), list("acks", memAcks, { station: st.id, date })]);
+  return {
+    station: st, date, city, alert: plan?.alert ?? null, createdAt: plan?.createdAt ?? null,
+    rows: (plan?.rows ?? []).map(({ band, time, base, headway, delta, action, justification, stations }) => ({ band, time, base, headway, delta, action, justification, affectsThisStation: stations.includes(st.name) })),
+    surges: plan?.stations?.find((x) => x.station === st.name)?.surges ?? [],
+    decisions, notices, acks,
+  };
+}));
+
 app.post("/api/decisions", route(async (req) => {
-  const { date, city, band, recommended, final, operator, reason } = req.body ?? {};
+  const user = needUser(req, "control");
+  const { date, city, band, recommended, final, reason } = req.body ?? {};
+  const operator = user.name; // from the login, not self-declared
   const cfg = { ...DEFAULT_CONFIG, ...(await getConfig()) };
   if (!CITIES[city]) throw bad("city must be ahmedabad or gandhinagar");
   if (!isDate(date)) throw bad("date must be YYYY-MM-DD");
@@ -384,4 +459,4 @@ app.post("/api/brief", route(async (req) => {
 }));
 
 const port = process.env.PORT ?? 3001;
-app.listen(port, () => { console.log(`API on :${port}`); autoRun().then(scheduleAuto); });
+app.listen(port, () => { console.log(`API on :${port}`); seedUsers().catch((e) => console.warn("seed users failed:", e.message)); autoRun().then(scheduleAuto); });

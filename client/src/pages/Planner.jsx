@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Msg, PageHead, usePost, tomorrow, cityName, fmtDate, dcls, CitySelect, alertName, Cost } from "../ui.jsx";
+import { Msg, PageHead, usePost, tomorrow, cityName, fmtDate, dcls, CitySelect, alertName, bandName, Cost } from "../ui.jsx";
 import { useT } from "../i18n.js";
 
-const BANDS = ["Morning", "Midday", "Evening", "Late"];
+const BANDS = ["Morning Peak", "Midday", "Evening Peak", "Late Night"];
 const holidayName = (h) => (typeof h === "string" ? h : h?.name);
 
 export default function Planner({ app }) {
@@ -14,7 +14,6 @@ export default function Planner({ app }) {
   const flagged = plan.filter((d) => d.alert && d.alert !== "ok");
   const planCity = st.data?.city ?? app.city;
   const t = useT();
-  const ALERT = new Proxy({}, { get: (_, a) => alertName(t, a) });
   const costs = plan.map((d) => d.cost).filter(Boolean);
   const sum = (f) => costs.reduce((a, c) => a + (+f(c) || 0), 0);
   const total = costs.length > 0 && {
@@ -24,34 +23,34 @@ export default function Planner({ app }) {
 
   return (
     <>
-      <PageHead title="Look-ahead planner" lede="One row per day. Cells show the recommended headway in minutes: red is tighter than baseline, green is wider." />
+      <PageHead title={t("plan.title")} lede={t("plan.lede")} />
       <form className="controls" onSubmit={(e) => { e.preventDefault(); run({ from, days, city: app.city }); }}>
         <CitySelect value={app.city} onChange={app.setCity} />
-        <label>From<input type="date" value={from} onChange={(e) => e.target.value && setFrom(e.target.value)} /></label>
-        <label>Days
+        <label>{t("plan.from")}<input type="date" value={from} onChange={(e) => e.target.value && setFrom(e.target.value)} /></label>
+        <label>{t("plan.days")}
           <select value={days} onChange={(e) => setDays(+e.target.value)}>{[3, 7, 14].map((n) => <option key={n}>{n}</option>)}</select>
         </label>
-        <button className="primary" disabled={st.loading}>{st.loading ? "Planning..." : "Build plan"}</button>
+        <button className="primary" disabled={st.loading}>{st.loading ? t("plan.building") : t("plan.build")}</button>
       </form>
       <Msg error={st.error} loading={st.loading} />
-      {!st.data && !st.loading && !st.error && <p className="msg">Choose a start date and span, then build the plan.</p>}
-      {st.data && !plan.length && <p className="msg">The server returned no days.</p>}
+      {!st.data && !st.loading && !st.error && <p className="msg">{t("plan.hint")}</p>}
+      {st.data && !plan.length && <p className="msg">{t("plan.noDays")}</p>}
       {plan.length > 0 && (
         <>
           <p className={flagged.length ? "banner" : "msg"} role="status">
             {flagged.length
-              ? <><strong>{flagged.length} day{flagged.length > 1 ? "s" : ""} flagged:</strong> {flagged.map((d, i) => <span key={d.date}>{i > 0 && ", "}<button className="link" onClick={() => app.openDay(d.date, planCity)}>{fmtDate(d.date)}</button> ({ALERT[d.alert] ?? d.alert})</span>)}</>
-              : `No flagged days in this ${plan.length}-day window for ${cityName(t, planCity)}.`}
+              ? <><strong>{t("plan.flagged", { n: flagged.length })}</strong> {flagged.map((d, i) => <span key={d.date}>{i > 0 && ", "}<button className="link" onClick={() => app.openDay(d.date, planCity)}>{fmtDate(d.date)}</button> ({alertName(t, d.alert)})</span>)}</>
+              : t("plan.noFlag", { n: plan.length, c: cityName(t, planCity) })}
           </p>
           <div className="scroll">
             <table className="plan">
-              <thead><tr><th>Day</th><th>Weather</th>{BANDS.map((b) => <th key={b} className="r">{b}</th>)}<th>Events</th></tr></thead>
+              <thead><tr><th>{t("th.day")}</th><th>{t("weather")}</th>{BANDS.map((b) => <th key={b} className="r">{bandName(t, b)}</th>)}<th>{t("th.events")}</th></tr></thead>
               <tbody>
                 {plan.map((d, i) => (
                   <motion.tr key={d.date} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, duration: 0.25 }}>
                     <td>
                       <button className="link day" onClick={() => app.openDay(d.date, planCity)}>
-                        {d.alert && d.alert !== "ok" && <span className={`mark a-${d.alert}`} title={ALERT[d.alert]} role="img" aria-label={ALERT[d.alert]} />}
+                        {d.alert && d.alert !== "ok" && <span className={`mark a-${d.alert}`} title={alertName(t, d.alert)} role="img" aria-label={alertName(t, d.alert)} />}
                         {fmtDate(d.date)}
                       </button>
                       <small>{d.dayType}{d.holiday ? `, ${holidayName(d.holiday)}` : ""}</small>
@@ -60,10 +59,10 @@ export default function Planner({ app }) {
                     {BANDS.map((b, k) => {
                       const x = d.rows?.[k];
                       return x
-                        ? <td key={b} className={`r cell c-${dcls(x.delta)} m${Math.min(3, Math.abs(x.delta))}`} title={`base ${x.base} min`}><span className="num">{x.headway}</span></td>
+                        ? <td key={b} className={`r cell c-${dcls(x.delta)} m${Math.min(3, Math.abs(x.delta))}`} title={t("plan.base", { b: x.base })}><span className="num">{x.headway}</span></td>
                         : <td key={b} className="r">-</td>;
                     })}
-                    <td className="ev">{d.events?.length ? d.events.map((e) => <span key={e.name}>{e.name}{e.live && <em className="tag">live</em>}</span>) : <span className="mute">none</span>}</td>
+                    <td className="ev">{d.events?.length ? d.events.map((e) => <span key={e.name}>{e.name}{e.live && <em className="tag">{t("live")}</em>}</span>) : <span className="mute">{t("none")}</span>}</td>
                   </motion.tr>
                 ))}
               </tbody>

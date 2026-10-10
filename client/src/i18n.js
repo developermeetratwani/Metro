@@ -190,6 +190,22 @@ const D = {
   "dis.bands": ["Recalculated headways", "ફરી ગણેલા હેડવે", "पुनर्गणित हेडवे"],
   "dis.noStations": ["No stations listed for this city.", "આ શહેર માટે કોઈ સ્ટેશન નથી.", "इस शहर के लिए कोई स्टेशन नहीं।"],
 
+  "sf.title": ["Find a station", "સ્ટેશન શોધો", "स्टेशन खोजें"],
+  "sf.search": ["Station name", "સ્ટેશનનું નામ", "स्टेशन का नाम"],
+  "sf.ph": ["Start typing a station", "સ્ટેશનનું નામ લખો", "स्टेशन का नाम लिखें"],
+  "sf.all": ["All lines", "બધી લાઇનો", "सभी लाइनें"],
+  "sf.clear": ["Show all stations", "બધા સ્ટેશનો બતાવો", "सभी स्टेशन दिखाएँ"],
+  "sf.notFound": ["No station matches “{q}”.", "“{q}” નામનું કોઈ સ્ટેશન નથી.", "“{q}” नाम का कोई स्टेशन नहीं।"],
+  "sf.wxNow": ["Weather now", "હાલનું હવામાન", "अभी का मौसम"],
+  "sf.noWx": ["No weather reading for this station.", "આ સ્ટેશન માટે હવામાન માહિતી નથી.", "इस स्टेशन के लिए मौसम जानकारी नहीं।"],
+  "sf.noSurge": ["No crowd surges expected here in the current plan.", "હાલની યોજનામાં અહીં વધારાની ભીડ અપેક્ષિત નથી.", "मौजूदा योजना में यहाँ अतिरिक्त भीड़ अपेक्षित नहीं।"],
+  "sf.noAdv": ["Make the plan on the Advisory page to see crowd surges here.", "અહીંની ભીડ જોવા માટે સલાહ પાના પર યોજના બનાવો.", "यहाँ की भीड़ देखने के लिए परामर्श पेज पर योजना बनाएँ।"],
+  "sf.trip": ["Plan a trip from here", "અહીંથી મુસાફરી શોધો", "यहाँ से यात्रा खोजें"],
+  "line.blue": ["Blue Line", "બ્લૂ લાઇન", "ब्लू लाइन"],
+  "line.red": ["Red Line", "રેડ લાઇન", "रेड लाइन"],
+  "line.yellow": ["Yellow Line", "યલો લાઇન", "येलो लाइन"],
+  "line.violet": ["Violet Line", "વાયોલેટ લાઇન", "वायलेट लाइन"],
+
   // journey
   "j.title": ["Journey planner", "મુસાફરી આયોજક", "यात्रा योजनाकार"],
   "j.lede": ["Check the fare and travel time between two stations.", "બે સ્ટેશન વચ્ચે ભાડું અને સમય જુઓ.", "दो स्टेशनों के बीच किराया और समय देखें।"],
