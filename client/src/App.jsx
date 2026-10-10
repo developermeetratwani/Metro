@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MotionConfig } from "framer-motion";
-import { useGet, tomorrow, lsGet, lsSet } from "./ui.jsx";
+import { useGet, tomorrow, lsGet, lsSet, api, useAuth, setAuth } from "./ui.jsx";
 import { LANGS, LangContext, translate } from "./i18n.js";
 import Advisory from "./pages/Advisory.jsx";
 import Planner from "./pages/Planner.jsx";
@@ -8,6 +8,9 @@ import Stations from "./pages/Stations.jsx";
 import Journey from "./pages/Journey.jsx";
 import Rules from "./pages/Rules.jsx";
 import Report from "./pages/Report.jsx";
+import MyStation from "./pages/MyStation.jsx";
+import Login from "./pages/Login.jsx";
+import Admin from "./pages/Admin.jsx";
 
 const PAGES = [
   ["advisory", Advisory],
@@ -16,8 +19,12 @@ const PAGES = [
   ["journey", Journey],
   ["rules", Rules],
   ["report", Report],
+  ["my-station", MyStation],
+  ["login", Login],
+  ["admin", Admin],
 ];
 const fromHash = () => { const k = location.hash.replace(/^#\/?/, "").split("?")[0]; return PAGES.some(([id]) => id === k) ? k : "advisory"; };
+const NAV = ["my-station", "advisory", "planner", "stations", "journey", "rules", "report", "admin"];
 
 export default function App() {
   const [page, setPage] = useState(fromHash);
@@ -51,7 +58,7 @@ export default function App() {
   // Show the server's auto-generated advisory for tomorrow until the operator generates their own.
   useEffect(() => {
     if (advisory) return;
-    fetch(`/api/auto?city=${city}`).then((r) => r.json()).then((a) => { if (a?.rows && a.date === date) setAdvisory(a); }).catch(() => {});
+    api(`/api/auto?city=${city}`).then((a) => { if (a?.rows && a.date === date) setAdvisory(a); }).catch(() => {});
   }, [city, date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openDay = (d, c) => { setCity(c); setDate(d); setSelKey(null); setAutoRun(true); go("advisory"); };
@@ -63,6 +70,7 @@ export default function App() {
   };
   const Page = PAGES.find(([id]) => id === page)[1];
   const m = meta.data;
+  const user = useAuth()?.user;
   const dot = (ok) => <span className={ok ? "st ok" : "st off"}>{t(ok ? "app.on" : "app.off")}</span>;
 
   return (
@@ -80,6 +88,12 @@ export default function App() {
               <span>{t("app.db")} {dot(m.db)}</span><span>{t("app.ai")} {dot(m.llm)}</span><span>{t("app.email")} {dot(m.keys?.email)}</span>
             </>}
           </p>
+          {user ? (
+            <p className="who">
+              <span><strong>{user.name}</strong> <em className={`role r-${user.role}`}>{t(`role.${user.role}`)}</em></span>
+              <button className="ghost" onClick={() => setAuth(null)}>{t("login.out")}</button>
+            </p>
+          ) : <a className="ghost btn" href="#/login">{t("login.title")}</a>}
           <label className="langsel"><span className="sr">{t("app.lang")}</span>
             <select value={lang} onChange={(e) => setLang(e.target.value)}>
               {LANGS.map(([k, v]) => <option key={k} value={k} lang={k}>{v}</option>)}
@@ -89,7 +103,7 @@ export default function App() {
       </header>
       <div className="shell">
         <nav className="nav" aria-label={t("app.sections")}>
-          {PAGES.map(([id]) => (
+          {NAV.filter((id) => (id === "admin" ? user?.role === "admin" : user || id !== "my-station")).map((id) => (
             <a key={id} href={`#/${id}`} aria-current={page === id ? "page" : undefined}>{t(`nav.${id}`)}</a>
           ))}
         </nav>

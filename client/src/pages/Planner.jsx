@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Msg, PageHead, usePost, tomorrow, cityName, fmtDate, dcls, CitySelect, alertName, bandName, Cost } from "../ui.jsx";
+import { BarChart, CostChart, LineChart } from "../charts.jsx";
 import { useT } from "../i18n.js";
 
 const BANDS = ["Morning Peak", "Midday", "Evening Peak", "Late Night"];
@@ -69,6 +70,20 @@ export default function Planner({ app }) {
             </table>
           </div>
           {total && <Cost c={total} label={t("plan.total", { n: costs.length })} />}
+          <div className="chart-grid">
+            <LineChart title={t("chart.planTitle")} desc={t("chart.planDesc")} cats={plan.map((d) => fmtDate(d.date))} unit={` ${t("min")}`}
+              yLabel={t("chart.minutes")} xLabel={t("th.day")}
+              series={BANDS.map((b, k) => ({ name: bandName(t, b), values: plan.map((d) => d.rows?.[k]?.headway), cls: `s${k + 1}` }))} />
+            {costs.length > 0 && (
+              <BarChart title={t("chart.dayCost")} desc={t("chart.dayCostDesc")} cats={plan.filter((d) => d.cost).map((d) => fmtDate(d.date))} unit=" ₹"
+                yLabel="₹" xLabel={t("th.day")}
+                series={[
+                  ...(costs.every((c) => c.vsBaseline) ? [{ name: t("chart.usualDay"), values: costs.map((c) => (+c.costINR || 0) - (+c.vsBaseline.costINR || 0)), cls: "s-base" }] : []),
+                  { name: t("chart.thisPlan"), values: costs.map((c) => +c.costINR || 0), cls: "s1" },
+                ]} />
+            )}
+            {total?.vsBaseline && <CostChart c={total} title={t("chart.weekCost")} />}
+          </div>
         </>
       )}
     </>

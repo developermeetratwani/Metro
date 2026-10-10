@@ -1,17 +1,34 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useT, tv } from "./i18n.js";
 
-export async function api(path, opts) {
+// Login session {token, user} lives in localStorage; every api() call reads it from here.
+const AUTH_KEY = "metro.auth";
+let auth = (() => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } })();
+const subs = new Set();
+export function setAuth(a) {
+  auth = a;
+  try { a ? localStorage.setItem(AUTH_KEY, JSON.stringify(a)) : localStorage.removeItem(AUTH_KEY); } catch { /* storage blocked */ }
+  subs.forEach((f) => f());
+}
+export const useAuth = () => useSyncExternalStore((cb) => { subs.add(cb); return () => subs.delete(cb); }, () => auth);
+export const isControl = (a) => ["control", "admin"].includes(a?.user?.role); // admin can do everything control can
+export const isAdmin = (a) => a?.user?.role === "admin";
+// "every 4 min · 15 trains/hour"
+export const freq = (t, headway, tph) => t("freq", { n: headway, h: tph ?? (headway > 0 ? Math.round(60 / headway) : "-") });
+
+export async function api(path, opts = {}) {
+  const headers = { ...(opts.body !== undefined && { "Content-Type": "application/json" }), ...(auth?.token && { Authorization: `Bearer ${auth.token}` }) };
   let res;
   try {
-    res = await fetch(path, opts && { ...opts, headers: { "Content-Type": "application/json" }, body: opts.body && JSON.stringify(opts.body) });
+    res = await fetch(path, { ...opts, headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined });
   } catch {
     throw new Error("err.unreachable");
   }
+  if (res.status === 401 && auth) setAuth(null); // expired or revoked token
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { /* non-JSON body */ }
-  if (!res.ok) throw new Error(data?.error || (res.status === 404 ? "err.404" : `err.http:${res.status}`));
+  if (!res.ok) throw Object.assign(new Error(data?.error || (res.status === 404 ? "err.404" : `err.http:${res.status}`)), { status: res.status });
   if (data === null) throw new Error("err.bad");
   return data;
 }

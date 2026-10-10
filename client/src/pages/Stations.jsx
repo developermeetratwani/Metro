@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useT, tv } from "../i18n.js";
 import { Context, Msg, PageHead, useGet, usePost, bodyOf, cityName, weatherName, fmtDate, fmtHour, dcls, fmtDelta, dword, bandName } from "../ui.jsx";
+import { BarChart, LineChart } from "../charts.jsx";
 
 const hh = (h) => `${String(h).padStart(2, "0")}`;
 const lineName = (t, l) => tv(t, "line.", l.id) ?? l.name;
@@ -41,6 +42,18 @@ function Heatmap({ app, st, load, show }) {
               </tbody>
             </table>
           </div>
+          {(() => {
+            // With many stations on screen, plot the five busiest so the lines stay readable.
+            const top = [...rows].sort((x, y) => Math.max(...y.values) - Math.max(...x.values)).slice(0, 5);
+            return (
+              <>
+                {rows.length > 5 && <p className="msg">{t("chart.top5")}</p>}
+                <LineChart title={t("chart.crowdTitle")} desc={t("chart.crowdDesc")} cats={d.hours.map((h) => `${hh(h)}:00`)} max={100}
+                  yLabel={t("chart.crowdY")} xLabel={t("chart.hour")}
+                  series={top.map((s, i) => ({ name: s.name, values: s.values, cls: `s${i + 1}` }))} />
+              </>
+            );
+          })()}
         </>
       )}
     </section>
@@ -74,6 +87,12 @@ function StationWeather({ wx, show }) {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="chart-grid">
+            <BarChart title={t("chart.tempTitle")} desc={t("chart.tempDesc")} cats={list.map((s) => s.name)} unit="°C" yLabel="°C" xLabel={t("th.station")}
+              series={[{ name: t("th.temp"), values: list.map((s) => s.temp_c), cls: "s2" }, { name: t("th.feels"), values: list.map((s) => s.feelslike_c), cls: "s4" }]} />
+            <BarChart title={t("chart.rainTitle")} desc={t("chart.rainDesc")} cats={list.map((s) => s.name)} unit="%" yLabel="%" xLabel={t("th.station")}
+              series={[{ name: t("th.rain"), values: list.map((s) => s.chance_of_rain), cls: "s3" }]} />
           </div>
         </>
       )}

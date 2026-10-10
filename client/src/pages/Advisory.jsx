@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Context, Cost, Msg, PageHead, api, useGet, usePost, bodyOf, cityName, weatherName, fmtDate, fmtHour, dcls, fmtDelta, dword, alertName, bandName, lsGet, lsSet } from "../ui.jsx";
+import { Context, Cost, Msg, PageHead, api, useGet, usePost, bodyOf, cityName, weatherName, fmtDate, fmtHour, dcls, fmtDelta, dword, alertName, bandName, useAuth, isControl, freq } from "../ui.jsx";
+import { BarChart, CostChart } from "../charts.jsx";
 import { useT, tv } from "../i18n.js";
 
 const row = (i) => ({ initial: { opacity: 0, y: 6 }, animate: { opacity: 1, y: 0 }, transition: { delay: i * 0.04, duration: 0.25 } });
@@ -105,19 +106,19 @@ function Result({ r, app }) {
   const t = useT();
   const [open, setOpen] = useState({});
   const [edit, setEdit] = useState(null);
-  const [operator, setOperator] = useState(() => lsGet("metro.operator"));
+  const auth = useAuth();
+  const control = isControl(auth);
   const [rev, setRev] = useState(0);
   const [dec, setDec] = useState({ busy: false, error: null });
   const log = useGet(r.date && r.city ? `/api/decisions?date=${r.date}&city=${r.city}&rev=${rev}` : null);
   const list = Array.isArray(log.data) ? log.data : [];
   const latest = (band) => list.find((d) => d.band === band); // list is newest first
   const w = r.weather ?? {};
-  const op = operator.trim();
 
   const decide = async (x, final, reason = "") => {
     setDec({ busy: true, error: null });
     try {
-      await api("/api/decisions", { method: "POST", body: { date: r.date, city: r.city, band: x.band, recommended: x.headway, final, operator: op, reason } });
+      await api("/api/decisions", { method: "POST", body: { date: r.date, city: r.city, band: x.band, recommended: x.headway, final, reason } });
       setDec({ busy: false, error: null }); setEdit(null); setRev((n) => n + 1);
     } catch (e) { setDec({ busy: false, error: e.message }); }
   };
@@ -139,10 +140,7 @@ function Result({ r, app }) {
       </p>
       {r.events?.length > 0 && <p className="evline"><span className="label">{t("th.events")}</span> {r.events.join("; ")}</p>}
 
-      <div className="controls operator noprint">
-        <label>{t("dec.operator")}<input type="text" value={operator} autoComplete="name" onChange={(e) => { setOperator(e.target.value); lsSet("metro.operator", e.target.value); }} /></label>
-        {!op && <small>{t("dec.needOp")}</small>}
-      </div>
+      <p className="msg noprint">{control ? t("dec.as", { n: auth.user.name }) : <>{t("dec.needLogin")} <a href="#/login">{t("login.title")}</a></>}</p>
 
       <div className="scroll">
         <table className="bands">
@@ -154,7 +152,7 @@ function Result({ r, app }) {
                 <Fragment key={x.band}>
                   <motion.tr {...row(i)}>
                     <td><strong>{bandName(t, x.band)}</strong><small className="num">{x.time}</small></td>
-                    <td className="r"><span className="big num">{x.headway}</span><small className="num">{t("adv.minBase", { b: x.base })}</small></td>
+                    <td className="r"><span className="big num">{x.headway}</span><small className="num">{freq(t, x.headway, x.trainsPerHour)}</small><small className="num">{t("adv.minBase", { b: x.base })}</small></td>
                     <td className={`d-${dcls(x.delta)}`}><span className="num">{fmtDelta(x.delta)}</span><small>{dword(t, x.delta)}</small></td>
                     <td>
                       {x.justification}
@@ -164,10 +162,12 @@ function Result({ r, app }) {
                     </td>
                     <td className="noprint dec">
                       {d && <small className={d.final === d.recommended ? "a-ok" : "d-tight"}>{d.final === d.recommended ? t("dec.approved", { op: d.operator }) : t("dec.overridden", { n: d.final, op: d.operator })}</small>}
-                      <span className="dec-btns">
-                        <button onClick={() => decide(x, x.headway)} disabled={!op || dec.busy}>{t("dec.approve")}</button>
-                        <button className="link" aria-expanded={edit === x.band} onClick={() => setEdit(edit === x.band ? null : x.band)} disabled={!op}>{t("dec.override")}</button>
-                      </span>
+                      {control ? (
+                        <span className="dec-btns">
+                          <button onClick={() => decide(x, x.headway)} disabled={dec.busy}>{t("dec.approve")}</button>
+                          <button className="link" aria-expanded={edit === x.band} onClick={() => setEdit(edit === x.band ? null : x.band)}>{t("dec.override")}</button>
+                        </span>
+                      ) : <small><a href="#/login">{t("dec.needLogin")}</a></small>}
                     </td>
                   </motion.tr>
                   {open[x.band] && (
@@ -187,6 +187,13 @@ function Result({ r, app }) {
         </table>
       </div>
       <Msg error={dec.error} />
+
+      <div className="chart-grid noprint">
+        <BarChart title={t("chart.hwTitle")} desc={t("chart.hwDesc")} cats={r.rows.map((x) => bandName(t, x.band))} unit={` ${t("min")}`}
+          yLabel={t("chart.minutes")} xLabel={t("th.band")}
+          series={[{ name: t("chart.usual"), values: r.rows.map((x) => x.base), cls: "s-base" }, { name: t("chart.rec"), values: r.rows.map((x) => x.headway), cls: "s1" }]} />
+        {r.cost?.vsBaseline && <CostChart c={r.cost} />}
+      </div>
 
       {r.fleet && (
         <p className="fleet"><span className="label">{t("fleet.label")}</span>
