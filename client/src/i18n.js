@@ -338,6 +338,18 @@ const D = {
   "my.ack": ["I have read tomorrow's plan", "મેં આવતીકાલની યોજના વાંચી છે", "मैंने कल की योजना पढ़ ली है"],
   "my.acked": ["Marked as read", "વાંચ્યું તરીકે નોંધાયું", "पढ़ा हुआ दर्ज"],
   "my.noAcks": ["Nobody has marked this plan as read yet.", "હજી કોઈએ આ યોજના વાંચી હોવાનું નોંધ્યું નથી.", "अभी किसी ने यह योजना पढ़ी हुई दर्ज नहीं की।"],
+  "inc.title": ["Report a problem", "સમસ્યાની જાણ કરો", "समस्या की सूचना दें"],
+  "inc.type": ["What happened", "શું થયું", "क्या हुआ"],
+  "inc.note": ["Details (optional)", "વિગત (વૈકલ્પિક)", "विवरण (वैकल्पिक)"],
+  "inc.ph": ["e.g. platform 2 overcrowded", "દા.ત. પ્લેટફોર્મ 2 પર ભારે ભીડ", "जैसे प्लेटफ़ॉर्म 2 पर भारी भीड़"],
+  "inc.send": ["Send to control room", "કંટ્રોલ રૂમને મોકલો", "कंट्रोल रूम को भेजें"],
+  "inc.sent": ["Reported — the control room has been notified.", "જાણ થઈ ગઈ — કંટ્રોલ રૂમને સૂચના મળી છે.", "सूचना दे दी गई — कंट्रोल रूम को बता दिया गया है।"],
+  "inc.none": ["No problems reported today.", "આજે કોઈ સમસ્યા નોંધાઈ નથી.", "आज कोई समस्या दर्ज नहीं हुई।"],
+  "inc.crowding": ["Overcrowding", "ભારે ભીડ", "भारी भीड़"],
+  "inc.delay": ["Train delay", "ટ્રેન મોડી", "ट्रेन में देरी"],
+  "inc.closure": ["Gate or area closed", "ગેટ અથવા વિસ્તાર બંધ", "गेट या क्षेत्र बंद"],
+  "inc.medical": ["Medical help needed", "તબીબી મદદ જરૂરી", "चिकित्सा सहायता चाहिए"],
+  "inc.other": ["Other", "અન્ય", "अन्य"],
 
   // charts
   "chart.minutes": ["Minutes between trains", "બે ટ્રેન વચ્ચે મિનિટ", "दो ट्रेनों के बीच मिनट"],

@@ -34,6 +34,37 @@ function Notice({ station, onSent }) {
   );
 }
 
+const INC_TYPES = ["crowding", "delay", "closure", "medical", "other"];
+function Incidents({ station, list, onSent }) {
+  const t = useT();
+  const [type, setType] = useState("crowding");
+  const [note, setNote] = useState("");
+  const [s, setS] = useState({ busy: false, error: null, ok: false });
+  async function send(e) {
+    e.preventDefault();
+    setS({ busy: true, error: null, ok: false });
+    try { await api("/api/incidents", { method: "POST", body: { station, type, note } }); setNote(""); setS({ busy: false, error: null, ok: true }); onSent(); }
+    catch (err) { setS({ busy: false, error: err.message, ok: false }); }
+  }
+  return (
+    <section className="panel">
+      <h3 className="sub">{t("inc.title")}</h3>
+      <form onSubmit={send} className="row-form">
+        <label>{t("inc.type")}
+          <select value={type} onChange={(e) => setType(e.target.value)}>{INC_TYPES.map((k) => <option key={k} value={k}>{t(`inc.${k}`)}</option>)}</select>
+        </label>
+        <label>{t("inc.note")}<input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} placeholder={t("inc.ph")} /></label>
+        <button className="primary" disabled={s.busy || !station}>{s.busy ? t("saving") : t("inc.send")}</button>
+      </form>
+      <Msg error={s.error} />
+      {s.ok && <p className="msg ok" role="status">{t("inc.sent")}</p>}
+      {list.length ? (
+        <ul className="feed-list">{list.map((x, i) => <li key={i} className="note-item"><span><b>{t(`inc.${x.type}`)}</b>{x.note ? ` — ${x.note}` : ""}</span><small>{x.by} · {new Date(x.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</small></li>)}</ul>
+      ) : <p className="msg">{t("inc.none")}</p>}
+    </section>
+  );
+}
+
 export default function MyStation({ app }) {
   const t = useT();
   const a = useAuth();
@@ -156,6 +187,8 @@ export default function MyStation({ app }) {
             ) : <p className="msg">{t("my.noNotices")}</p>}
             {control && sid && <Notice station={sid} onSent={() => setTick((n) => n + 1)} />}
           </section>
+
+          <Incidents station={sid} list={f.incidents ?? []} onSent={() => setTick((n) => n + 1)} />
 
           <section className="panel tint-teal">
             <h3 className="label">{t("my.ackTitle")}</h3>
