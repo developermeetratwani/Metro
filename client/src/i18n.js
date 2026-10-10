@@ -99,7 +99,7 @@ const D = {
   "adv.auto": ["Auto-generated {t} · all known events", "આપમેળે તૈયાર {t} · બધા જાણીતા કાર્યક્રમો", "स्वतः तैयार {t} · सभी ज्ञात कार्यक्रम"],
   "adv.wx": ["{mm} mm rain, {p}% chance, max {c}°C", "{mm} મિમી વરસાદ, {p}% શક્યતા, મહત્તમ {c}°C", "{mm} मिमी बारिश, {p}% संभावना, अधिकतम {c}°C"],
   "adv.wxSource": ["weather source: {s}", "હવામાન સ્રોત: {s}", "मौसम स्रोत: {s}"],
-  "adv.minBase": ["min (usually {b})", "મિનિટ (સામાન્ય રીતે {b})", "मिनट (आम तौर पर {b})"],
+  "adv.minBase": ["usually every {b} min", "સામાન્ય રીતે દર {b} મિનિટે", "आम तौर पर हर {b} मिनट"],
   "adv.stations": ["Stations: {s}", "સ્ટેશનો: {s}", "स्टेशन: {s}"],
   "adv.trains": ["{n} trains", "{n} ટ્રેનો", "{n} ट्रेनें"],
   "adv.why": ["Why", "કેમ?", "क्यों"],
