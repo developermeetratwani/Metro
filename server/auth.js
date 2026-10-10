@@ -29,6 +29,7 @@ export function readToken(header) {
 
 // Demo accounts: one control room login plus one login per key station. Password comes from DEMO_PASSWORD.
 export const DEMO_USERS = [
+  { username: "admin", name: "Master Admin", role: "admin", station: null },
   { username: "control", name: "Control Room", role: "control", station: null },
   { username: "motera", name: "Motera Stadium station", role: "station", station: "motera-stadium" },
   { username: "kalupur", name: "Kalupur Railway Station", role: "station", station: "kalupur-railway-station" },

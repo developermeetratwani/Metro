@@ -41,3 +41,11 @@ Auth header: `Authorization: Bearer <token>` (token from login, valid 12 h). Rol
 - `POST /api/station-feed/ack` (station role) body `{date}` -> `{ok}` — "I have read tomorrow's plan"
 - `POST /api/notices` (control role) body `{station, text}` -> `{ok}` — message from control room to a station
 - `POST /api/decisions` now REQUIRES a control-role token; `operator` is taken from the login (body field ignored). 401/403 otherwise.
+
+## Round 5 — master admin (backend done)
+Role `admin` (login `admin`) can do everything `control` can, plus manage operators:
+- `GET /api/admin/operators` -> `[{username,name,email,role,station,createdAt,createdBy}]`
+- `POST /api/admin/operators` body `{username, name, password(8+), role:"station"|"control"|"admin", station?, email?}` -> `{ user, notified:{text, emailed?} }` — creates the operator, posts an in-app notice to that station and emails them (if email given; password is NOT emailed)
+- `PATCH /api/admin/operators/:username` body any of `{name, email, role, station, password}` -> `{ user, notified|null }` — reassigning a station notifies again
+- `DELETE /api/admin/operators/:username` -> `{ok}`
+- station-feed rows now include `trainsPerHour` (frequency).

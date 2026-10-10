@@ -362,7 +362,7 @@ async function seedUsers() {
 const needUser = (req, role) => {
   const u = readToken(req.headers.authorization);
   if (!u) throw bad("please log in", 401);
-  if (role && u.role !== role) throw bad("not allowed for your role", 403);
+  if (role && u.role !== role && u.role !== "admin") throw bad("not allowed for your role", 403); // master admin can do everything
   return u;
 };
 const loginTries = new Map(); // shortcut: in-memory brute-force limit per username, fine for one server
@@ -379,6 +379,72 @@ app.post("/api/auth/login", route(async (req) => {
 }));
 app.get("/api/auth/me", route(async (req) => needUser(req)));
 app.get("/api/auth/accounts", route(async () => DEMO_USERS.map(({ username, name, role, station }) => ({ username, name, role, station }))));
+
+// --- Master admin: create / reassign / remove operators; the operator is notified in-app and by email ---
+const pubUser = ({ hash, salt, _id, ...u }) => u;
+const listUsers = async () => (userColl() ? userColl().find({}, { projection: { _id: 0, hash: 0, salt: 0 } }).toArray() : memUsers.map(pubUser));
+const saveUser = async (u) => (userColl() ? userColl().replaceOne({ username: u.username }, u, { upsert: true }) : (memUsers.splice(memUsers.findIndex((x) => x.username === u.username) >>> 0, 1), memUsers.push(u)));
+const stationById = (id) => network().stations.find((s) => s.id === id);
+async function notifyAssignment(u, by) {
+  const st = stationById(u.station);
+  const text = st ? `${u.name} is now the operator for ${st.name}.` : `${u.name} now has ${u.role} access.`;
+  const doc = { station: u.station ?? "all", text, from: by, at: new Date(), kind: "assignment" };
+  if (db) await db.collection("notices").insertOne({ ...doc }); else memNotices.unshift(doc);
+  if (u.email && process.env.SMTP_HOST && process.env.SMTP_USER) {
+    const mailer = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT ?? 587), auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } });
+    await mailer.sendMail({ from: `"Metro Ops Advisor" <${process.env.SMTP_USER}>`, to: u.email, subject: `You have been assigned: ${st?.name ?? u.role}`, text: `Hello ${u.name},
+
+${text}
+Log in with username "${u.username}". Your password is shared by the admin separately.
+
+Metro Ops Advisor` })
+      .then(() => (doc.emailed = true)).catch((e) => console.warn("assignment email failed:", e.message));
+  }
+  return doc;
+}
+const validUserBody = (b, creating) => {
+  const username = String(b.username ?? "").trim().toLowerCase();
+  if (creating && !/^[a-z0-9._-]{3,30}$/.test(username)) throw bad("username: 3-30 letters, numbers, dot, dash or underscore");
+  if (b.role !== undefined && !["station", "control", "admin"].includes(b.role)) throw bad("role must be station, control or admin");
+  if (b.name !== undefined && (typeof b.name !== "string" || !b.name.trim() || b.name.length > 60)) throw bad("name must be 1-60 characters");
+  if (b.email && !/^[^s@]+@[^s@]+.[^s@]+$/.test(b.email)) throw bad("email looks wrong");
+  if (b.station && !stationById(b.station)) throw bad("unknown station");
+  if (b.password !== undefined && (typeof b.password !== "string" || b.password.length < 8 || b.password.length > 100)) throw bad("password must be 8-100 characters");
+  return username;
+};
+app.get("/api/admin/operators", route(async (req) => { needUser(req, "admin"); return listUsers(); }));
+app.post("/api/admin/operators", route(async (req) => {
+  const admin = needUser(req, "admin");
+  const b = req.body ?? {};
+  const username = validUserBody(b, true);
+  if (!b.password || !b.name) throw bad("name and password are required");
+  if (await findUser(username)) throw bad("that username is taken", 409);
+  const role = b.role ?? "station";
+  if (role === "station" && !b.station) throw bad("choose a station for a station operator");
+  const u = { username, name: b.name.trim(), email: b.email || null, role, station: role === "station" ? b.station : null, ...hashPassword(b.password), createdAt: new Date(), createdBy: admin.name };
+  await saveUser(u);
+  return { user: pubUser(u), notified: await notifyAssignment(u, admin.name) };
+}));
+app.patch("/api/admin/operators/:username", route(async (req) => {
+  const admin = needUser(req, "admin");
+  const b = req.body ?? {};
+  validUserBody(b, false);
+  const u = await findUser(String(req.params.username).toLowerCase());
+  if (!u) throw bad("no such operator", 404);
+  const next = { ...u, ...(b.name && { name: b.name.trim() }), ...(b.email !== undefined && { email: b.email || null }), ...(b.role && { role: b.role }), ...(b.station !== undefined && { station: b.station || null }), ...(b.password && hashPassword(b.password)) };
+  if (next.role === "station" && !next.station) throw bad("a station operator needs a station");
+  if (next.role !== "station") next.station = null;
+  await saveUser(next);
+  const moved = next.station !== u.station || next.role !== u.role;
+  return { user: pubUser(next), notified: moved ? await notifyAssignment(next, admin.name) : null };
+}));
+app.delete("/api/admin/operators/:username", route(async (req) => {
+  const admin = needUser(req, "admin");
+  const name = String(req.params.username).toLowerCase();
+  if (name === admin.username) throw bad("you cannot remove your own account");
+  if (userColl()) await userColl().deleteOne({ username: name }); else { const i = memUsers.findIndex((x) => x.username === name); if (i >= 0) memUsers.splice(i, 1); }
+  return { ok: true };
+}));
 
 // Notices from the control room to a station, and station acknowledgements.
 const memNotices = [], memAcks = [];
@@ -402,7 +468,7 @@ app.post("/api/station-feed/ack", route(async (req) => {
 // One station's view: today's plan rows that touch it, surges there, control-room decisions, notices, acks.
 app.get("/api/station-feed", route(async (req) => {
   const u = needUser(req);
-  const stationId = u.role === "station" ? u.station : String(req.query.station ?? "");
+  const stationId = u.role === "station" ? ((await findUser(u.username))?.station ?? u.station) /* reassignment applies without re-login */ : String(req.query.station ?? "");
   const st = network().stations.find((s) => s.id === stationId);
   if (!st) throw bad("unknown station");
   const city = st.city;
@@ -412,7 +478,7 @@ app.get("/api/station-feed", route(async (req) => {
   const [decisions, notices, acks] = await Promise.all([list("decisions", memDecisions, { date, city }), list("notices", memNotices, { station: st.id }), list("acks", memAcks, { station: st.id, date })]);
   return {
     station: st, date, city, alert: plan?.alert ?? null, createdAt: plan?.createdAt ?? null,
-    rows: (plan?.rows ?? []).map(({ band, time, base, headway, delta, action, justification, stations }) => ({ band, time, base, headway, delta, action, justification, affectsThisStation: stations.includes(st.name) })),
+    rows: (plan?.rows ?? []).map(({ band, time, base, headway, delta, action, justification, stations }) => ({ band, time, base, headway, delta, action, justification, trainsPerHour: Math.round(60 / headway), affectsThisStation: stations.includes(st.name) })),
     surges: plan?.stations?.find((x) => x.station === st.name)?.surges ?? [],
     decisions, notices, acks,
   };
